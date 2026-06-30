@@ -93,7 +93,7 @@ class Version000001Date20250630000000 extends SimpleMigrationStep {
             $table = $schema->createTable('cc_attachment');
             $table->addColumn('id', 'integer', ['autoincrement' => true, 'unsigned' => true, 'length' => 9]);
             $table->addColumn('object_type', 'string', ['length' => 64]);
-            $table->addColumn('object_id', 'string', ['length' => 64]);
+		$table->addColumn('object_id', 'integer', ['unsigned' => true, 'length' => 9]);
             $table->addColumn('description', 'string', ['length' => 2000, 'notnull' => false]);
             $table->addColumn('data', 'string', ['length' => 2000]);
             $table->addColumn('created', 'datetime', ['notnull' => false]);
