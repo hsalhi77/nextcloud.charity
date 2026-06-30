@@ -100,6 +100,29 @@ class Version000001Date20250630000000 extends SimpleMigrationStep {
             $table->setPrimaryKey(['id']);
         }
 
+        // oc_cc_acl
+        if (!$schema->hasTable('cc_acl')) {
+            $table = $schema->createTable('cc_acl');
+            $table->addColumn('id', 'integer', ['autoincrement' => true, 'unsigned' => true, 'length' => 9]);
+            $table->addColumn('parentid', 'integer', ['unsigned' => true, 'default' => 0]);
+            $table->addColumn('description', 'string', ['length' => 255, 'notnull' => false]);
+            $table->addColumn('created', 'datetime', ['notnull' => false]);
+            $table->addColumn('updated', 'datetime', ['notnull' => false]);
+            $table->addColumn('deleted', 'datetime', ['notnull' => false]);
+            $table->addColumn('isactive', 'boolean', ['default' => true]);
+            $table->addColumn('object_id', 'integer', ['unsigned' => true, 'length' => 9]);
+            $table->addColumn('object_type', 'string', ['length' => 64]);
+            $table->addColumn('shareid', 'integer', ['unsigned' => true, 'notnull' => false, 'length' => 9]);
+            $table->addColumn('participant', 'string', ['length' => 64]);
+            $table->addColumn('type', 'integer', ['unsigned' => true, 'length' => 9]);
+            $table->addColumn('permission_edit', 'boolean', ['default' => false]);
+            $table->addColumn('permission_share', 'boolean', ['default' => false]);
+            $table->addColumn('permission_manage', 'boolean', ['default' => false]);
+            $table->addColumn('owner', 'boolean', ['default' => false]);
+            $table->setPrimaryKey(['id']);
+            $table->addIndex(['object_type', 'object_id'], 'cc_acl_object');
+        }
+
         return $schema;
     }
 
