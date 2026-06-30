@@ -38,7 +38,7 @@ class cc_CaseMapper extends CharityMapper {
         $item->resolveRelation('owner', function ($owner) use (&$userManager) {
             $user = $userManager->get($owner);
             if ($user !== null) {
-                return new \OCA\Manger\Db\User($user);
+                return new \OCA\Charity\Db\User($user);
             }
             return null;
         });
