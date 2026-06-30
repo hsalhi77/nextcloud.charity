@@ -19,7 +19,6 @@ class cc_attachment extends Entity implements JsonSerializable {
 	protected $tag;
 	protected $size;
 	protected $name;
-	protected $cmCompanyId;
 
 	public function __construct() {
 		$this->addType('id', 'integer');
@@ -47,7 +46,6 @@ class cc_attachment extends Entity implements JsonSerializable {
 			'tag' => $this->tag,
 			'size' => $this->size,
 			'name' => $this->name,
-			'cmCompanyId' => $this->cmCompanyId,
 		];
 	}
 }

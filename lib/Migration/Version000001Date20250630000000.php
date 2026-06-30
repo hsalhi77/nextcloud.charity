@@ -94,9 +94,17 @@ class Version000001Date20250630000000 extends SimpleMigrationStep {
             $table->addColumn('id', 'integer', ['autoincrement' => true, 'unsigned' => true, 'length' => 9]);
             $table->addColumn('object_type', 'string', ['length' => 64]);
             $table->addColumn('object_id', 'string', ['length' => 64]);
+            $table->addColumn('description', 'string', ['length' => 2000, 'notnull' => false]);
             $table->addColumn('data', 'string', ['length' => 2000]);
             $table->addColumn('created', 'datetime', ['notnull' => false]);
             $table->addColumn('updated', 'datetime', ['notnull' => false]);
+            $table->addColumn('deleted', 'datetime', ['notnull' => false]);
+            $table->addColumn('isactive', 'boolean', ['default' => true]);
+            $table->addColumn('type', 'string', ['length' => 64, 'notnull' => false]);
+            $table->addColumn('url', 'string', ['length' => 2000, 'notnull' => false]);
+            $table->addColumn('tag', 'string', ['length' => 255, 'notnull' => false]);
+            $table->addColumn('size', 'integer', ['notnull' => false]);
+            $table->addColumn('name', 'string', ['length' => 255, 'notnull' => false]);
             $table->setPrimaryKey(['id']);
         }
 

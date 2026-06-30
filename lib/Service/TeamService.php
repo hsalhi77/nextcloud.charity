@@ -7,6 +7,7 @@ use OCA\Circles\CirclesManager;
 use OCA\Circles\Model\Circle;
 use OCA\Circles\Model\Member;
 use OCA\Circles\Model\Probes\CircleProbe;
+use OCA\Circles\Service\MembershipService;
 use OCA\Charity\Exceptions\BadRequestException;
 use OCP\App\IAppManager;
 use OCP\IGroupManager;
@@ -15,6 +16,7 @@ use OCP\Server;
 
 class TeamService {
 	private CirclesManager $circlesManager;
+	private MembershipService $membershipService;
 	private IUserManager $userManager;
 	private IGroupManager $groupManager;
 	private ?string $userId;
@@ -22,12 +24,14 @@ class TeamService {
 
 	public function __construct(
 		CirclesManager $circlesManager,
+		MembershipService $membershipService,
 		IUserManager $userManager,
 		IGroupManager $groupManager,
 		IAppManager $appManager,
 		$userId
 	) {
 		$this->circlesManager = $circlesManager;
+		$this->membershipService = $membershipService;
 		$this->userManager = $userManager;
 		$this->groupManager = $groupManager;
 		$this->userId = $userId;
@@ -84,9 +88,9 @@ class TeamService {
 	}
 
 	/**
-	 * Remove a user from a circle using the MemberRequest::delete() workaround.
+	 * Remove a member from a circle using the MemberRequest::delete() workaround.
 	 */
-	public function deleteMember(string $circleId, string $userId): bool {
+	public function deleteMember(string $circleId, string $memberId): bool {
 		if (!$this->circlesEnabled) {
 			return false;
 		}
@@ -99,18 +103,29 @@ class TeamService {
 		try {
 			$owner = $this->circlesManager->getLocalFederatedUser($circle->getOwner()->getUserId());
 			$this->circlesManager->startSession($owner);
-			$members = $circle->getMembers();
-			foreach ($members as $member) {
-				if ($member->getUserId() === $userId && $member->getLevel() !== Member::LEVEL_OWNER) {
-					try {
-						$memberRequest = Server::get(\OCA\Circles\Db\MemberRequest::class);
-						$memberRequest->delete($member);
-					} catch (\Throwable $e) {
-						\OC::$server->getLogger()->error('Charity: delete member failed: ' . $e->getMessage(), ['app' => 'charity']);
-					}
-					return true;
-				}
+
+			$memberRequest = Server::get(\OCA\Circles\Db\MemberRequest::class);
+			$member = $memberRequest->getMemberById($memberId);
+
+			if ($member === null || $member->getLevel() === Member::LEVEL_OWNER) {
+				return false;
 			}
+
+			try {
+				$memberRequest->delete($member);
+			} catch (\Throwable $e) {
+				\OC::$server->getLogger()->error('Charity: delete member failed: ' . $e->getMessage(), ['app' => 'charity']);
+				return false;
+			}
+
+			try {
+				$federatedUser = $this->circlesManager->getFederatedUser($member->getUserId(), Member::TYPE_USER);
+				$this->membershipService->deleteFederatedUser($federatedUser);
+			} catch (\Throwable $e) {
+				\OC::$server->getLogger()->error('Charity: deleteFederatedUser failed: ' . $e->getMessage(), ['app' => 'charity']);
+			}
+
+			return true;
 		} catch (\Throwable $e) {
 			\OC::$server->getLogger()->error('Charity: Failed to delete member: ' . $e->getMessage(), ['app' => 'charity']);
 		}

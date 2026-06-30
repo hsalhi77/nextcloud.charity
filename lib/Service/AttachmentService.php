@@ -6,6 +6,7 @@ namespace OCA\Charity\Service;
 use OCA\Charity\Db\Acl;
 use OCA\Charity\Db\cc_attachment;
 use OCA\Charity\Db\cc_attachmentMapper;
+use OCA\Charity\Db\cc_Case;
 use OCA\Charity\Db\cc_CaseMapper;
 use OCP\Files\File;
 use OCP\Files\Folder;
@@ -61,7 +62,6 @@ class AttachmentService {
 		$attachment->setDescription($file['description'] ?? '');
 		$attachment->setData($file['name']);
 		$attachment->setSize((int)($file['size'] ?? 0));
-		$attachment->setCmCompanyId($object->getCircleId());
 
 		$base = $file['data'];
 		if (strpos($base, ',') !== false) {
@@ -196,11 +196,21 @@ class AttachmentService {
 	private function getObjectFolder(string $userId, string $objectType, int $objectId): Folder {
 		$folder = $this->getCasesFolder($userId);
 		if ($objectType === 'cc_Case') {
-			$path = $folder->getPath() . '/' . $objectId;
+			$case = $this->caseMapper->find($objectId);
+			$path = $folder->getPath() . '/' . $this->getCaseFolderName($case);
 		} else {
 			$path = $folder->getPath() . '/' . $objectType . '/' . $objectId;
 		}
 		return $this->getOrCreateFolder($path);
+	}
+
+	/**
+	 * Build a folder-safe name for a case attachment directory.
+	 */
+	private function getCaseFolderName(cc_Case $case): string {
+		$firstName = preg_replace('/[^a-zA-Z0-9_-]/', '', (string)$case->getFirstName());
+		$lastName = preg_replace('/[^a-zA-Z0-9_-]/', '', (string)$case->getLastName());
+		return 'Case-' . $case->getId() . '-' . $firstName . '-' . $lastName;
 	}
 
 	/**
@@ -235,6 +245,12 @@ class AttachmentService {
 		$protocol = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || $_SERVER['SERVER_PORT'] == 443) ? 'https://' : 'http://';
 		$host = $_SERVER['HTTP_HOST'] ?? '';
 		$base = strstr($protocol . $host . ($_SERVER['REQUEST_URI'] ?? ''), 'charity', true);
-		return $base . 'files/?dir=/Charity/' . ($objectType === 'cc_Case' ? $objectId : $objectType . '/' . $objectId) . '&openfile=' . $fileId;
+		if ($objectType === 'cc_Case') {
+			$case = $this->caseMapper->find($objectId);
+			$folderName = $this->getCaseFolderName($case);
+		} else {
+			$folderName = $objectType . '/' . $objectId;
+		}
+		return $base . 'files/?dir=/Charity/' . $folderName . '&openfile=' . $fileId;
 	}
 }
