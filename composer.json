@@ -1,0 +1,18 @@
+{
+    "name": "nextcloud/charity",
+    "description": "Charity Case Management for Nextcloud",
+    "type": "project",
+    "license": "AGPL-3.0-or-later",
+    "autoload": {
+        "psr-4": {
+            "OCA\\Charity\\": "lib/"
+        }
+    },
+    "require": {
+        "php": ">=7.4"
+    },
+    "scripts": {
+        "cs-fix": "php-cs-fixer fix",
+        "lint": "find lib -name '*.php' -exec php -l {} \\;"
+    }
+}

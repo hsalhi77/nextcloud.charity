@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<info xmlns:xsi= "http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+    <id>charity</id>
+    <name>Charity</name>
+    <summary>Charity Case Management</summary>
+
+    <description><![CDATA[Charity Case Management for Nextcloud]]></description>
+    <version>1.0.0</version>
+    <licence>agpl</licence>
+    <author mail="charity@example.com" homepage="https://example.com">Charity Case Management</author>
+    <namespace>Charity</namespace>
+    <category>organization</category>
+    <bugs>https://example.com</bugs>
+    <dependencies>
+        <php min-version="7.4"/>
+        <database min-version="9.4">pgsql</database>
+        <database>sqlite</database>
+        <database min-version="5.5">mysql</database>
+        <nextcloud min-version="25" max-version="30"/>
+    </dependencies>
+    <navigations>
+        <navigation>
+            <name>Charity</name>
+            <route>charity.page.index.home</route>
+            <icon>charity.svg</icon>
+        </navigation>
+    </navigations>
+</info>
