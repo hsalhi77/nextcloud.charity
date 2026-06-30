@@ -1,0 +1,8 @@
+/node_modules/
+/vendor/
+/js/
+/composer.lock
+/test-results/
+/.php_cs.cache
+/.eslintcache
+/.stylelintcache
