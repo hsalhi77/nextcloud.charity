@@ -227,7 +227,17 @@ export default {
 		},
 	},
 	watch: {
-		entityId: { immediate: true, handler() { this.loadItem() } },
+		entityId: {
+			immediate: true,
+			handler(newVal, oldVal) {
+				if (newVal !== oldVal) {
+					this.activeTab = 'summary'
+					this.relatedPayments = []
+					this.relatedUpdates = []
+				}
+				this.loadItem()
+			},
+		},
 		activeTab(tab) {
 			if (!this.entityId) return
 			if (tab === 'payments') this.loadPayments()
