@@ -5,6 +5,8 @@ use OCA\Charity\Service\Helper;
 use OCP\IConfig;
 use OCP\IRequest;
 use OCP\AppFramework\Controller;
+use OCP\AppFramework\Http;
+use OCP\AppFramework\Http\JSONResponse;
 
 class ConfigController extends Controller {
 	private $config;
@@ -32,10 +34,14 @@ class ConfigController extends Controller {
 	}
 
 	/**
-	 * @NoAdminRequired
 	 * @NoCSRFRequired
 	 */
-	public function setValue($key) {
+	public function setValue(string $key) {
+		$allowed = ['createTeamForCase', 'groupLimit'];
+		if (!in_array($key, $allowed, true)) {
+			return new JSONResponse(['message' => 'Invalid config key', 'data' => []], Http::STATUS_BAD_REQUEST);
+		}
+
 		return $this->helper->handleErrorResponse(function () use ($key) {
 			$params = $this->request->getParams();
 			$value = $params['value'] ?? '';
