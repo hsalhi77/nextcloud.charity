@@ -131,10 +131,6 @@ class Version000001Date20250630000000 extends SimpleMigrationStep {
             $table->addIndex(['object_type', 'object_id'], 'cc_acl_object');
         }
 
-        return $schema;
-    }
-
-    public function postSchemaChange(IOutput $output, Closure $schemaClosure, array $options): void {
         // Seed LOV tables
         $db = \OC::$server->getDatabaseConnection();
 
@@ -149,5 +145,11 @@ class Version000001Date20250630000000 extends SimpleMigrationStep {
         foreach ($updateTypes as $type) {
             $db->executeStatement("INSERT IGNORE INTO `*PREFIX*cc_update_type` (title, isactive) VALUES (?, 1)", [$type]);
         }
+
+        return $schema;
+    }
+
+    public function postSchemaChange(IOutput $output, Closure $schemaClosure, array $options): void {
+        // Seeding moved to changeSchema so it runs in schema-only migration mode
     }
 }
