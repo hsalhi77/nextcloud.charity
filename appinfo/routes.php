@@ -4,6 +4,9 @@ return [
         ['name' => 'page#index', 'url' => '/', 'verb' => 'GET', 'postfix' => 'root'],
         ['name' => 'page#index', 'url' => '/home', 'verb' => 'GET', 'postfix' => 'home'],
 
+        ['name' => 'config#get', 'url' => '/api/v1.0/config', 'verb' => 'GET'],
+        ['name' => 'config#setValue', 'url' => '/api/v1.0/config/{key}', 'verb' => 'POST'],
+
         ['name' => 'case#getall', 'url' => '/cases/getall', 'verb' => 'POST'],
         ['name' => 'payment#getall', 'url' => '/payments/getall', 'verb' => 'POST'],
         ['name' => 'update#getall', 'url' => '/updates/getall', 'verb' => 'POST'],

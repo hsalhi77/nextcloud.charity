@@ -27,10 +27,12 @@ class cc_CaseMapper extends CharityMapper {
 
     public function findAllByUser($userId, $param = []) {
         $sql = 'SELECT *, 0 as shared FROM `*PREFIX*cc_case` WHERE owner = ? AND isactive = 1';
+        $bindings = [$userId];
         foreach ($param as $key => $val) {
-            $sql .= " AND $key = '" . $param[$key] . "'";
+            $sql .= ' AND `' . preg_replace('/[^a-zA-Z0-9_]/', '', $key) . '` = ?';
+            $bindings[] = $val;
         }
-        return $this->findEntitiesString($sql, [$userId]);
+        return $this->findEntitiesString($sql, $bindings);
     }
 
     public function mapOwner(cc_Case &$item) {

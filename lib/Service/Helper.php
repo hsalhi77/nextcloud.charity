@@ -12,10 +12,8 @@ use OCA\Charity\Exceptions\InsufficientStorageException;
 use OCA\Charity\Exceptions\InvalidAttachmentType;
 use OCA\Charity\Exceptions\NoPermissionException;
 use OCA\Charity\Exceptions\NotFoundException;
-use OCA\Charity\Service\Util;
 
 use OCP\AppFramework\Http;
-use OCP\AppFramework\Http\DataResponse;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\IUserSession;
@@ -35,88 +33,38 @@ class Helper
     }
 
 
-    public function handleErrorResponse(Closure $callback)
-    {
+    public function handleErrorResponse(Closure $callback): JSONResponse {
         try {
-            
-            $message=array();
-            $message["message"]="succes";
-            $DataResponse=new DataResponse($callback());
-            $message["data"]=$DataResponse->getData();
-           return $message;
+            return new JSONResponse([
+                'message' => 'succes',
+                'data' => $callback(),
+            ], Http::STATUS_OK);
         } catch (NotFoundException $e) {
-            $message=array();
-            $message["message"]=$e->getMessage();
-            $message["data"]=[];
-            \OC::$server->getLogger()->error($e->getLine()." ".$e->getTraceAsString());
-            return $message;
+            return $this->buildErrorResponse($e, $e->getStatus());
+        } catch (NoPermissionException $e) {
+            return $this->buildErrorResponse($e, $e->getStatus());
+        } catch (BadRequestException $e) {
+            return $this->buildErrorResponse($e, $e->getStatus());
+        } catch (ConflictException $e) {
+            return $this->buildErrorResponse($e, $e->getStatus());
+        } catch (InsufficientStorageException $e) {
+            return $this->buildErrorResponse($e, Http::STATUS_INSUFFICIENT_STORAGE);
+        } catch (InvalidAttachmentType $e) {
+            return $this->buildErrorResponse($e, Http::STATUS_BAD_REQUEST);
+        } catch (\BadMethodCallException $e) {
+            return $this->buildErrorResponse($e, Http::STATUS_BAD_REQUEST);
+        } catch (DoesNotExistException $e) {
+            return $this->buildErrorResponse($e, Http::STATUS_NOT_FOUND);
+        } catch (\Throwable $e) {
+            return $this->buildErrorResponse($e, Http::STATUS_INTERNAL_SERVER_ERROR);
         }
-        catch (NoPermissionException $e) {
-            $message=array();
-            $message["message"]=$e->getMessage();
-            $message["data"]=[];
-             \OC::$server->getLogger()->error($e->getLine()." ".$e->getTraceAsString());
-            return $message;
-        }
-        catch (BadRequestException $e) {
-            $message=array();
-            $message["message"]=$e->getMessage();
-            $message["data"]=[];
-            \OC::$server->getLogger()->error($e->getLine()." ".$e->getTraceAsString());
-            return $message;
-        }
-        catch (ConflictException $e) {
-           $message=array();
-            $message["message"]=$e->getMessage();
-            $message["data"]=[];
-             \OC::$server->getLogger()->error($e->getLine()." ".$e->getTraceAsString());
-            return $message;
-        }
-        catch (InsufficientStorageException $e) {
-            $message=array();
-            $message["message"]=$e->getMessage();
-            $message["data"]=[];
-             \OC::$server->getLogger()->error($e->getLine()." ".$e->getTraceAsString());
-            return $message;
-        }
-        catch (InvalidAttachmentType $e) {
-           $message=array();
-            $message["message"]=$e->getMessage();
-            $message["data"]=[];
-             \OC::$server->getLogger()->error($e->getLine()." ".$e->getTraceAsString());
-            return $message;
-        }
-        catch (\BadMethodCallException $e)
-        {
-            $message=array();
-            $message["message"]=$e->getMessage();
-            $message["data"]=[];
-            \OC::$server->getLogger()->error($e->getLine()." ".$e->getTraceAsString());
-            return $message;
-        }
-        catch (DoesNotExistException $e)
-        {
-            $message=array();
-            $message["message"]=$e->getMessage();
-            $message["data"]=[];
-             \OC::$server->getLogger()->error($e->getLine()." ".$e->getTraceAsString());
-            return $message;
-        }
-        catch (\Throwable $e) {
-            $message = [];
-            $message["message"] = $e->getMessage();
-            $message["data"] = [];
-            \OC::$server->getLogger()->error($e->getLine()." ".$e->getTraceAsString());
-            return $message;
-        }
-        catch (\Error $e) {
-            $message = [];
-            $message["message"] = $e->getMessage();
-            $message["data"] = [];
-             \OC::$server->getLogger()->error($e->getLine()." ".$e->getTraceAsString());
-            return $message;
-         }
-       
+    }
 
+    private function buildErrorResponse(\Throwable $e, int $status): JSONResponse {
+        \OC::$server->getLogger()->error($e->getLine() . ' ' . $e->getTraceAsString());
+        return new JSONResponse([
+            'message' => $e->getMessage(),
+            'data' => [],
+        ], $status);
     }
 }

@@ -107,10 +107,10 @@ export default {
 					{ key: 'dateAdded', label: t('charity', 'Date Added'), type: 'date' },
 					{ key: 'dob', label: t('charity', 'Date of Birth'), type: 'date' },
 					{ key: 'referredBy', label: t('charity', 'Referred By'), type: 'text' },
-					{ key: 'phone', label: t('charity', 'Phone'), type: 'text' },
-					{ key: 'email', label: t('charity', 'Email'), type: 'text' },
-					{ key: 'address', label: t('charity', 'Address'), type: 'textarea' },
 					{ key: 'cityId', label: t('charity', 'City'), type: 'select', options: this.stores.cc_City?.items || [], optionLabel: 'title', optionValue: 'id' },
+					{ key: 'town', label: t('charity', 'Town'), type: 'text' },
+					{ key: 'location', label: t('charity', 'Location'), type: 'text' },
+					{ key: 'dependants', label: t('charity', 'Dependants'), type: 'number' },
 					{ key: 'description', label: t('charity', 'Description'), type: 'textarea' },
 					{ key: 'recommendation', label: t('charity', 'Recommendation'), type: 'textarea' },
 				]

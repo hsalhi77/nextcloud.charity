@@ -110,8 +110,7 @@ class cc_CaseService {
 
 		$item = $this->mapper->insert($item);
 
-		$folder = $this->attachmentService->getCasesFolder($this->userId);
-		$folder->newFolder($item->getId());
+		$this->attachmentService->getCaseFolder($item, $this->userId);
 
 		if ($item->getCircleId()) {
 			$this->aclService->addAcl('cc_Case', $item->getId(), $this->userId, Acl::PERMISSION_TYPE_CIRCLE, $item->getCircleId(), 1, 1, 1);

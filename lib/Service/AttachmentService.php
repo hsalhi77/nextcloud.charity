@@ -191,6 +191,15 @@ class AttachmentService {
 	}
 
 	/**
+	 * Get or create the attachment folder for a specific case.
+	 */
+	public function getCaseFolder(cc_Case $case, string $userId): Folder {
+		$folder = $this->getCasesFolder($userId);
+		$path = $folder->getPath() . '/' . $this->getCaseFolderName($case);
+		return $this->getOrCreateFolder($path);
+	}
+
+	/**
 	 * Get or create the folder for an object's attachments.
 	 */
 	private function getObjectFolder(string $userId, string $objectType, int $objectId): Folder {
