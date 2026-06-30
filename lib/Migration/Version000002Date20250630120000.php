@@ -6,7 +6,7 @@ use OCP\DB\ISchemaWrapper;
 use OCP\Migration\IOutput;
 use OCP\Migration\SimpleMigrationStep;
 
-class Version000002Date20250630000000 extends SimpleMigrationStep {
+class Version000002Date20250630120000 extends SimpleMigrationStep {
     public function changeSchema(IOutput $output, Closure $schemaClosure, array $options): ?ISchemaWrapper {
         $db = \OC::$server->getDatabaseConnection();
 
