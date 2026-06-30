@@ -60,8 +60,8 @@ function createEntityStore(name, endpoint, dateFields = []) {
 				this.error = null
 				this._pendingFetch = (async () => {
 					try {
-						const data = unwrap(await post(`${endpoint}/getall`, params))
-						this.items = this._normalise(data)
+						const res = await post(`${endpoint}/getall`, params)
+						this.items = Array.isArray(res.data) ? this._normalise(res.data) : []
 					} catch (err) {
 						this.error = err.message
 						throw err

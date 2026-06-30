@@ -7,6 +7,7 @@ export const useUiStore = defineStore('ui', {
 		slidePanelEntity: null,
 		slidePanelEntityType: '',
 		slidePanelEntityId: null,
+		filters: {},
 	}),
 
 	actions: {
@@ -22,6 +23,18 @@ export const useUiStore = defineStore('ui', {
 			this.slidePanelOpen = false
 			this.slidePanelEntity = null
 			this.slidePanelEntityId = null
+		},
+
+		setFilter(entity, filter) {
+			this.filters[entity] = filter
+		},
+
+		clearFilter(entity) {
+			delete this.filters[entity]
+		},
+
+		getFilter(entity) {
+			return this.filters[entity] || null
 		},
 	},
 })
