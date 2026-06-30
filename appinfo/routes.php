@@ -11,8 +11,8 @@ return [
         ['name' => 'casetype#getall', 'url' => '/casetype/getall', 'verb' => 'POST'],
         ['name' => 'updatetype#getall', 'url' => '/updatetype/getall', 'verb' => 'POST'],
 
-        ['name' => 'team#addmember', 'url' => '/team/addmember', 'verb' => 'POST'],
-        ['name' => 'team#deletemember', 'url' => '/team/deletemember', 'verb' => 'POST'],
+        ['name' => 'team#addMember', 'url' => '/team/addmember', 'verb' => 'POST'],
+        ['name' => 'team#deleteMember', 'url' => '/team/deletemember', 'verb' => 'POST'],
         ['name' => 'team#getCircleMembers', 'url' => '/team/getCircleMembers', 'verb' => 'POST'],
         ['name' => 'team#searchUsers', 'url' => '/team/searchUsers', 'verb' => 'POST'],
 

@@ -23,7 +23,7 @@ class TeamController extends Controller {
      * @NoAdminRequired
      * @NoCSRFRequired
      */
-    public function addmember() {
+    public function addMember() {
         return $this->helper->handleErrorResponse(function () {
             $params = $this->request->getParams()['params'] ?? [];
             $circleId = $params['circleId'] ?? '';
@@ -37,7 +37,7 @@ class TeamController extends Controller {
      * @NoAdminRequired
      * @NoCSRFRequired
      */
-    public function deletemember() {
+    public function deleteMember() {
         return $this->helper->handleErrorResponse(function () {
             $params = $this->request->getParams()['params'] ?? [];
             $circleId = $params['circleId'] ?? '';
