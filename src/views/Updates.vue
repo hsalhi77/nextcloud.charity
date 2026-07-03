@@ -66,7 +66,8 @@ export default {
 	computed: {
 		columns() {
 			return [
-				{ key: 'caseId', label: t('charity', 'Case'), width: '20%', formatter: this.formatCase },
+				{ key: 'id', label: t('charity', '#'), width: '8%', formatter: this.formatId },
+				{ key: 'caseId', label: t('charity', 'Case'), width: '12%', formatter: this.formatCase },
 				{ key: 'updateDate', label: t('charity', 'Update Date'), width: '15%', formatter: this.formatDate },
 				{ key: 'updateTypeId', label: t('charity', 'Update Type'), width: '15%', formatter: this.formatUpdateType },
 				{ key: 'updateBy', label: t('charity', 'Updated By'), width: '15%' },
@@ -82,16 +83,16 @@ export default {
 		])
 	},
 	methods: {
+		formatId(id) {
+			return String(id).padStart(10, '0')
+		},
 		formatDate(date) {
 			if (!date) return ''
 			return new Date(date).toLocaleDateString()
 		},
 		formatCase(id) {
-			const caseItem = this.casesStore.byId(id)
-			if (caseItem) {
-				return `${caseItem.firstName || ''} ${caseItem.lastName || ''}`.trim()
-			}
-			return id
+			if (!id) return ''
+			return String(id).padStart(10, '0')
 		},
 		formatUpdateType(id) {
 			const type = this.updateTypesStore.byId(id)

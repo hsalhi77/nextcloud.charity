@@ -16,6 +16,8 @@ class cc_CaseService {
 	private $permissionService;
 	private $teamService;
 	private $attachmentService;
+	private $paymentService;
+	private $updateService;
 	private $userManager;
 	private $groupManager;
 	private $userId;
@@ -27,6 +29,8 @@ class cc_CaseService {
 		PermissionService $permissionService,
 		TeamService $teamService,
 		AttachmentService $attachmentService,
+		cc_PaymentService $paymentService,
+		cc_UpdateService $updateService,
 		IUserManager $userManager,
 		IGroupManager $groupManager,
 		ISession $session,
@@ -37,6 +41,8 @@ class cc_CaseService {
 		$this->permissionService = $permissionService;
 		$this->teamService = $teamService;
 		$this->attachmentService = $attachmentService;
+		$this->paymentService = $paymentService;
+		$this->updateService = $updateService;
 		$this->userManager = $userManager;
 		$this->groupManager = $groupManager;
 		$this->session = $session;
@@ -149,6 +155,20 @@ class cc_CaseService {
 	public function delete($id) {
 		$this->permissionService->checkPermission($this->mapper, 'cc_Case', $id, Acl::PERMISSION_MANAGE);
 		$item = $this->mapper->find($id);
+
+		$payments = $this->paymentService->findByCase($id);
+		foreach ($payments as $payment) {
+			$this->paymentService->delete($payment->getId());
+		}
+
+		$updates = $this->updateService->findByCase($id);
+		foreach ($updates as $update) {
+			$this->updateService->delete($update->getId());
+		}
+
+		$this->attachmentService->deleteAllInCase($id, 'cc_Case', $this->userId);
+		$this->attachmentService->deleteCaseFolder($id, $this->userId);
+
 		$item->setIsactive(0);
 		$this->mapper->update($item);
 		return true;

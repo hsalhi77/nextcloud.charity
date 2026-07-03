@@ -2,6 +2,7 @@
 namespace OCA\Charity\Db;
 
 class cc_Case extends RelationalEntity {
+    protected $shared;
     protected $dateAdded;
     protected $referredBy;
     protected $firstName;
@@ -25,6 +26,7 @@ class cc_Case extends RelationalEntity {
 
     public function __construct() {
         $this->addType('id', 'integer');
+        $this->addType('shared', 'integer');
         $this->addType('dateAdded', 'datetime');
         $this->addType('cityId', 'integer');
         $this->addType('caseTypeId', 'integer');

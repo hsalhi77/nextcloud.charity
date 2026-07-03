@@ -56,6 +56,8 @@ export default {
 	data() {
 		return {
 			actions: [
+				{ name: 'addPayment', label: t('charity', '[+] Payment') },
+				{ name: 'addUpdate', label: t('charity', '[+] Update') },
 				{ name: 'edit', label: t('charity', 'Edit'), icon: 'icon-edit' },
 				{ name: 'delete', label: t('charity', 'Delete'), icon: 'icon-delete' },
 			],
@@ -64,6 +66,7 @@ export default {
 	computed: {
 		columns() {
 			return [
+				{ key: 'id', label: t('charity', '#'), width: '8%', formatter: this.formatId },
 				{ key: 'firstName', label: t('charity', 'First Name'), width: '15%' },
 				{ key: 'lastName', label: t('charity', 'Last Name'), width: '15%' },
 				{ key: 'idNumber', label: t('charity', 'ID#'), width: '10%' },
@@ -80,6 +83,10 @@ export default {
 		])
 	},
 	methods: {
+		formatId(id) {
+			if (id == null) return ''
+			return String(id).padStart(10, '0')
+		},
 		formatDate(date) {
 			if (!date) return ''
 			return new Date(date).toLocaleDateString()
@@ -97,7 +104,15 @@ export default {
 		openEditPanel(item) {
 			this.ui.openSlidePanel({ mode: 'edit', entityType: 'cc_Case', entity: item })
 		},
+		openAddPaymentPanel(item) {
+			this.ui.openSlidePanel({ mode: 'add', entityType: 'cc_Payment', entity: { caseId: item.id } })
+		},
+		openAddUpdatePanel(item) {
+			this.ui.openSlidePanel({ mode: 'add', entityType: 'cc_Update', entity: { caseId: item.id } })
+		},
 		onAction({ name, item }) {
+			if (name === 'addPayment') this.openAddPaymentPanel(item)
+			if (name === 'addUpdate') this.openAddUpdatePanel(item)
 			if (name === 'edit') this.openEditPanel(item)
 			if (name === 'delete') this.deleteCase(item)
 		},

@@ -64,11 +64,13 @@ export default {
 	computed: {
 		columns() {
 			return [
-				{ key: 'caseId', label: t('charity', 'Case'), width: '20%', formatter: this.formatCase },
+				{ key: 'id', label: t('charity', '#'), width: '8%', formatter: this.formatId },
+				{ key: 'caseId', label: t('charity', 'Case'), width: '15%', formatter: this.formatCase },
 				{ key: 'paymentDate', label: t('charity', 'Payment Date'), width: '15%', formatter: this.formatDate },
-				{ key: 'paymentReceipt', label: t('charity', 'Type'), width: '15%', formatter: this.formatType },
-				{ key: 'paymentType', label: t('charity', 'Payment Type'), width: '20%' },
-				{ key: 'paidBy', label: t('charity', 'Paid By'), width: '15%' },
+				{ key: 'paymentType', label: t('charity', 'Type'), width: '15%' },
+				{ key: 'paymentAmount', label: t('charity', 'Amount'), width: '12%' },
+				{ key: 'paymentReference', label: t('charity', 'Payment Reference'), width: '15%' },
+				{ key: 'paidBy', label: t('charity', 'Paid By'), width: '13%' },
 			]
 		},
 	},
@@ -83,16 +85,12 @@ export default {
 			if (!date) return ''
 			return new Date(date).toLocaleDateString()
 		},
-		formatType(value) {
-			if (!value) return ''
-			return String(value).charAt(0).toUpperCase() + String(value).slice(1)
+		formatId(id) {
+			return String(id).padStart(10, '0')
 		},
 		formatCase(id) {
-			const caseItem = this.casesStore.byId(id)
-			if (caseItem) {
-				return `${caseItem.firstName || ''} ${caseItem.lastName || ''}`.trim()
-			}
-			return id
+			if (!id) return ''
+			return String(id).padStart(10, '0')
 		},
 		openAddPanel() {
 			this.ui.openSlidePanel({ mode: 'add', entityType: 'cc_Payment' })

@@ -42,6 +42,7 @@
 
 		<NcAppContent>
 			<router-view />
+			<SlidePanel v-if="ui.slidePanelOpen" />
 		</NcAppContent>
 	</NcContent>
 </template>
@@ -60,6 +61,8 @@ import CogIcon from 'vue-material-design-icons/Cog.vue'
 import MapMarkerIcon from 'vue-material-design-icons/MapMarker.vue'
 import TagIcon from 'vue-material-design-icons/Tag.vue'
 import ClipboardListIcon from 'vue-material-design-icons/ClipboardList.vue'
+import SlidePanel from './components/SlidePanel.vue'
+import { useUiStore } from './stores/ui.js'
 import { translate as t } from '@nextcloud/l10n'
 
 export default {
@@ -76,9 +79,13 @@ export default {
 		MapMarkerIcon,
 		TagIcon,
 		ClipboardListIcon,
+		SlidePanel,
+	},
+	setup() {
+		const ui = useUiStore()
+		return { ui, t }
 	},
 	methods: {
-		t,
 		isActive(name) {
 			return this.$route.name === name
 		},

@@ -7,9 +7,13 @@ use OCP\AppFramework\Db\DoesNotExistException;
 
 class cc_UpdateService {
 	private $mapper;
+	private AttachmentService $attachmentService;
+	private ?string $userId;
 
-	public function __construct(cc_UpdateMapper $mapper) {
+	public function __construct(cc_UpdateMapper $mapper, AttachmentService $attachmentService, $userId) {
 		$this->mapper = $mapper;
+		$this->attachmentService = $attachmentService;
+		$this->userId = $userId;
 	}
 
 	public function findAll() {
@@ -49,6 +53,8 @@ class cc_UpdateService {
 	}
 
 	public function delete($id) {
+		$this->attachmentService->deleteAllForObject($id, 'cc_Update', $this->userId);
+		$this->attachmentService->deleteObjectFolder($id, 'cc_Update', $this->userId);
 		$item = $this->mapper->find($id);
 		return $this->mapper->delete($item);
 	}

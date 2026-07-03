@@ -29,7 +29,14 @@ class cc_CaseMapper extends CharityMapper {
         $sql = 'SELECT *, 0 as shared FROM `*PREFIX*cc_case` WHERE owner = ? AND isactive = 1';
         $bindings = [$userId];
         foreach ($param as $key => $val) {
-            $sql .= ' AND `' . preg_replace('/[^a-zA-Z0-9_]/', '', $key) . '` = ?';
+            if ($key === '' || $key[0] === '_' || $val === '') {
+                continue;
+            }
+            $cleanKey = preg_replace('/[^a-zA-Z0-9_]/', '', $key);
+            if ($cleanKey === '') {
+                continue;
+            }
+            $sql .= ' AND `' . $cleanKey . '` = ?';
             $bindings[] = $val;
         }
         return $this->findEntitiesString($sql, $bindings);

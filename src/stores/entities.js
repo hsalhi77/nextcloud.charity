@@ -118,3 +118,61 @@ export const useUpdatesStore = createEntityStore('updates', '/updates', ['update
 export const useCitiesStore = createEntityStore('cities', '/city')
 export const useCaseTypesStore = createEntityStore('caseTypes', '/casetype')
 export const useUpdateTypesStore = createEntityStore('updateTypes', '/updatetype')
+
+export const useAttachmentsStore = defineStore('attachments', {
+	state: () => ({
+		items: [],
+		loading: false,
+		uploading: false,
+		error: null,
+	}),
+
+	getters: {
+		forObject: state => (objectType, objectId) => state.items.filter(a => a.object_type === objectType && a.object_id === objectId),
+	},
+
+	actions: {
+		async fetchByObject(objectType, objectId) {
+			this.loading = true
+			this.error = null
+			try {
+				const res = await post(`/attachment/${objectId}/${objectType}`, {})
+				this.items = Array.isArray(res.data) ? res.data : []
+			} catch (err) {
+				this.error = err.message
+				throw err
+			} finally {
+				this.loading = false
+			}
+		},
+		async upload(objectType, objectId, file) {
+			this.uploading = true
+			this.error = null
+			try {
+				const res = await post('/attachment', {
+					objectType,
+					objectId,
+					file: {
+						name: file.name,
+						data: file.data,
+						size: file.size,
+						tag: file.tag || '',
+						description: file.description || '',
+					},
+				})
+				if (res.data) this.items.push(res.data)
+				return res.data
+			} catch (err) {
+				this.error = err.message
+				throw err
+			} finally {
+				this.uploading = false
+			}
+		},
+		async remove(id) {
+			await del(`/attachment/${id}`)
+			const idx = this.items.findIndex(a => a.id === id)
+			if (idx !== -1) this.items.splice(idx, 1)
+		},
+	},
+})

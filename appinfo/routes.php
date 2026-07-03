@@ -18,6 +18,7 @@ return [
         ['name' => 'team#deleteMember', 'url' => '/team/deletemember', 'verb' => 'POST'],
         ['name' => 'team#getCircleMembers', 'url' => '/team/getCircleMembers', 'verb' => 'POST'],
         ['name' => 'team#searchUsers', 'url' => '/team/searchUsers', 'verb' => 'POST'],
+        ['name' => 'team#usersByGroup', 'url' => '/team/usersByGroup', 'verb' => 'POST'],
 
         ['name' => 'attachment#index', 'url' => '/attachment/{object_type}', 'verb' => 'POST'],
         ['name' => 'attachment#show', 'url' => '/attachment/{object_id}/{object_type}', 'verb' => 'POST'],

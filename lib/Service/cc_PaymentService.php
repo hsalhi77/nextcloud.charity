@@ -7,9 +7,13 @@ use OCP\AppFramework\Db\DoesNotExistException;
 
 class cc_PaymentService {
 	private $mapper;
+	private AttachmentService $attachmentService;
+	private ?string $userId;
 
-	public function __construct(cc_PaymentMapper $mapper) {
+	public function __construct(cc_PaymentMapper $mapper, AttachmentService $attachmentService, $userId) {
 		$this->mapper = $mapper;
+		$this->attachmentService = $attachmentService;
+		$this->userId = $userId;
 	}
 
 	public function findAll() {
@@ -35,6 +39,8 @@ class cc_PaymentService {
 		$item->setPaymentReceipt($param['paymentReceipt'] ?? '');
 		$item->setPaidBy($param['paidBy'] ?? '');
 		$item->setPaymentType($param['paymentType'] ?? '');
+		$item->setPaymentAmount($param['paymentAmount'] ?? 0);
+		$item->setPaymentReference($param['paymentReference'] ?? '');
 		return $this->mapper->insert($item);
 	}
 
@@ -45,10 +51,14 @@ class cc_PaymentService {
 		if (isset($param['paymentReceipt'])) $item->setPaymentReceipt($param['paymentReceipt']);
 		if (isset($param['paidBy'])) $item->setPaidBy($param['paidBy']);
 		if (isset($param['paymentType'])) $item->setPaymentType($param['paymentType']);
+		if (isset($param['paymentAmount'])) $item->setPaymentAmount($param['paymentAmount']);
+		if (isset($param['paymentReference'])) $item->setPaymentReference($param['paymentReference']);
 		return $this->mapper->update($item);
 	}
 
 	public function delete($id) {
+		$this->attachmentService->deleteAllForObject($id, 'cc_Payment', $this->userId);
+		$this->attachmentService->deleteObjectFolder($id, 'cc_Payment', $this->userId);
 		$item = $this->mapper->find($id);
 		return $this->mapper->delete($item);
 	}

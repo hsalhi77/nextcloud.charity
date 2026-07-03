@@ -67,4 +67,16 @@ class TeamController extends Controller {
             return $this->service->searchUsers($params['search'] ?? '');
         });
     }
+
+    /**
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     */
+    public function usersByGroup() {
+        return $this->helper->handleErrorResponse(function () {
+            $params = $this->request->getParams()['params'] ?? [];
+            $groupName = $params['group'] ?? 'Charity';
+            return $this->service->getUsersByGroup($groupName);
+        });
+    }
 }

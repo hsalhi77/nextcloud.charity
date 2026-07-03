@@ -8,6 +8,8 @@ use OCA\Charity\Db\cc_attachment;
 use OCA\Charity\Db\cc_attachmentMapper;
 use OCA\Charity\Db\cc_Case;
 use OCA\Charity\Db\cc_CaseMapper;
+use OCA\Charity\Db\cc_PaymentMapper;
+use OCA\Charity\Db\cc_UpdateMapper;
 use OCP\Files\File;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
@@ -16,6 +18,8 @@ use OCP\Files\NotFoundException;
 class AttachmentService {
 	private cc_attachmentMapper $mapper;
 	private cc_CaseMapper $caseMapper;
+	private cc_PaymentMapper $paymentMapper;
+	private cc_UpdateMapper $updateMapper;
 	private PermissionService $permissionService;
 	private IRootFolder $root;
 	private ?string $userId;
@@ -23,12 +27,16 @@ class AttachmentService {
 	public function __construct(
 		cc_attachmentMapper $mapper,
 		cc_CaseMapper $caseMapper,
+		cc_PaymentMapper $paymentMapper,
+		cc_UpdateMapper $updateMapper,
 		PermissionService $permissionService,
 		IRootFolder $root,
 		$userId
 	) {
 		$this->mapper = $mapper;
 		$this->caseMapper = $caseMapper;
+		$this->paymentMapper = $paymentMapper;
+		$this->updateMapper = $updateMapper;
 		$this->permissionService = $permissionService;
 		$this->root = $root;
 		$this->userId = $userId;
@@ -50,7 +58,13 @@ class AttachmentService {
 		$mapper = $this->getMapperForObject($objectType);
 		$object = $mapper->find($objectId);
 
-		$this->permissionService->checkPermission($mapper, $objectType, $objectId, Acl::PERMISSION_READ);
+		$permObjectType = $objectType;
+		$permObjectId = $objectId;
+		if (($objectType === 'cc_Payment' || $objectType === 'cc_Update') && $object->getCaseId()) {
+			$permObjectType = 'cc_Case';
+			$permObjectId = $object->getCaseId();
+		}
+		$this->permissionService->checkPermission($this->caseMapper, $permObjectType, $permObjectId, Acl::PERMISSION_READ);
 
 		$attachment = new cc_attachment();
 		$attachment->setObjectId($objectId);
@@ -87,10 +101,21 @@ class AttachmentService {
 	public function update(int $id, array $data): cc_attachment {
 		$attachment = $this->mapper->find($id);
 
+		$permObjectType = $attachment->getObjectType();
+		$permObjectId = (int)$attachment->getObjectId();
+		if (($permObjectType === 'cc_Payment' || $permObjectType === 'cc_Update')) {
+			$parent = $permObjectType === 'cc_Payment'
+				? $this->paymentMapper->find($permObjectId)
+				: $this->updateMapper->find($permObjectId);
+			if ($parent->getCaseId()) {
+				$permObjectType = 'cc_Case';
+				$permObjectId = $parent->getCaseId();
+			}
+		}
 		$this->permissionService->checkPermission(
-			$this->getMapperForObject($attachment->getObjectType()),
-			$attachment->getObjectType(),
-			$attachment->getObjectId(),
+			$this->caseMapper,
+			$permObjectType,
+			$permObjectId,
 			Acl::PERMISSION_MANAGE
 		);
 
@@ -129,8 +154,18 @@ class AttachmentService {
 		$objectType = $attachment->getObjectType();
 		$objectId = (int)$attachment->getObjectId();
 
-		$mapper = $this->getMapperForObject($objectType);
-		$this->permissionService->checkPermission($mapper, $objectType, $objectId, Acl::PERMISSION_MANAGE);
+		$permObjectType = $objectType;
+		$permObjectId = $objectId;
+		if (($permObjectType === 'cc_Payment' || $permObjectType === 'cc_Update')) {
+			$parent = $permObjectType === 'cc_Payment'
+				? $this->paymentMapper->find($permObjectId)
+				: $this->updateMapper->find($permObjectId);
+			if ($parent->getCaseId()) {
+				$permObjectType = 'cc_Case';
+				$permObjectId = $parent->getCaseId();
+			}
+		}
+		$this->permissionService->checkPermission($this->caseMapper, $permObjectType, $permObjectId, Acl::PERMISSION_MANAGE);
 
 		$folder = $this->getObjectFolder($userId ?? $this->userId, $objectType, $objectId);
 		try {
@@ -149,9 +184,51 @@ class AttachmentService {
 	 * Delete all attachments for an object.
 	 */
 	public function deleteAllInCase(int $objectId, string $objectType, ?string $userId = null): void {
+		$this->deleteAllForObject($objectId, $objectType, $userId);
+	}
+
+	/**
+	 * Delete all attachments for an object.
+	 */
+	public function deleteAllForObject(int $objectId, string $objectType, ?string $userId = null): void {
 		$attachments = $this->mapper->findAll($objectId, $objectType);
 		foreach ($attachments as $attachment) {
 			$this->delete($attachment->getId(), $userId ?? $this->userId);
+		}
+	}
+
+	/**
+	 * Delete the case attachment folder.
+	 */
+	public function deleteCaseFolder(int $caseId, string $userId): void {
+		$case = $this->caseMapper->find($caseId);
+		if ($case === null) {
+			return;
+		}
+		$folder = $this->getCasesFolder($userId);
+		$path = $folder->getPath() . '/' . $this->getCaseFolderName($case);
+		$this->deleteFolderByPath($path);
+	}
+
+	/**
+	 * Delete an object's attachment folder (payments, updates, etc.).
+	 */
+	public function deleteObjectFolder(int $objectId, string $objectType, string $userId): void {
+		$folder = $this->getCasesFolder($userId);
+		$path = $folder->getPath() . '/' . $this->getSubFolderName($objectType, $objectId);
+		$this->deleteFolderByPath($path);
+	}
+
+	private function deleteFolderByPath(string $path): void {
+		try {
+			if ($this->root->nodeExists($path)) {
+				$node = $this->root->get($path);
+				if ($node instanceof Folder && $node->isDeletable()) {
+					$node->delete();
+				}
+			}
+		} catch (\OCP\Files\NotFoundException $e) {
+			\OC::$server->getLogger()->warning('Charity: Folder not found for deletion: ' . $path, ['app' => 'charity']);
 		}
 	}
 
@@ -185,6 +262,10 @@ class AttachmentService {
 		switch ($objectType) {
 			case 'cc_Case':
 				return $this->caseMapper;
+			case 'cc_Payment':
+				return $this->paymentMapper;
+			case 'cc_Update':
+				return $this->updateMapper;
 		}
 
 		throw new \InvalidArgumentException('Unsupported attachment object type: ' . $objectType);
@@ -195,6 +276,10 @@ class AttachmentService {
 	 */
 	public function getCaseFolder(cc_Case $case, string $userId): Folder {
 		$folder = $this->getCasesFolder($userId);
+		$existing = $this->findExistingCaseFolder($folder, $case);
+		if ($existing !== null) {
+			return $existing;
+		}
 		$path = $folder->getPath() . '/' . $this->getCaseFolderName($case);
 		return $this->getOrCreateFolder($path);
 	}
@@ -206,20 +291,62 @@ class AttachmentService {
 		$folder = $this->getCasesFolder($userId);
 		if ($objectType === 'cc_Case') {
 			$case = $this->caseMapper->find($objectId);
-			$path = $folder->getPath() . '/' . $this->getCaseFolderName($case);
+			$existing = $this->findExistingCaseFolder($folder, $case);
+			if ($existing !== null) {
+				return $existing;
+			}
+			$path = $folder->getPath() . '/' . $this->getSubFolderName($objectType, $objectId);
 		} else {
-			$path = $folder->getPath() . '/' . $objectType . '/' . $objectId;
+			$path = $folder->getPath() . '/' . $this->getSubFolderName($objectType, $objectId);
 		}
 		return $this->getOrCreateFolder($path);
+	}
+
+	private function getSubFolderName(string $objectType, int $objectId): string {
+		switch ($objectType) {
+			case 'cc_Case':
+				$case = $this->caseMapper->find($objectId);
+				return $this->getCaseFolderName($case);
+			case 'cc_Payment':
+				return 'Payments/' . sprintf('%010d', $objectId);
+			case 'cc_Update':
+				return 'Updates/' . sprintf('%010d', $objectId);
+		}
+		return $objectType . '/' . $objectId;
 	}
 
 	/**
 	 * Build a folder-safe name for a case attachment directory.
 	 */
 	private function getCaseFolderName(cc_Case $case): string {
-		$firstName = preg_replace('/[^a-zA-Z0-9_-]/', '', (string)$case->getFirstName());
-		$lastName = preg_replace('/[^a-zA-Z0-9_-]/', '', (string)$case->getLastName());
-		return 'Case-' . $case->getId() . '-' . $firstName . '-' . $lastName;
+		return sprintf('%010d', $case->getId());
+	}
+
+	/**
+	 * Try to find an existing case folder in old naming formats, falling back to new.
+	 */
+	private function findExistingCaseFolder(Folder $casesFolder, cc_Case $case): ?Folder {
+		$newName = $this->getCaseFolderName($case);
+		if ($casesFolder->nodeExists($newName)) {
+			$node = $casesFolder->get($newName);
+			if ($node instanceof Folder) {
+				return $node;
+			}
+		}
+		$oldNames = [
+			sprintf('%06d', $case->getId()),
+			'Case-' . $case->getId() . '-' . $case->getFirstName() . '-' . $case->getLastName(),
+			'Case-' . $case->getId(),
+		];
+		foreach ($oldNames as $oldName) {
+			if ($casesFolder->nodeExists($oldName)) {
+				$node = $casesFolder->get($oldName);
+				if ($node instanceof Folder) {
+					return $node;
+				}
+			}
+		}
+		return null;
 	}
 
 	/**
@@ -254,12 +381,7 @@ class AttachmentService {
 		$protocol = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || $_SERVER['SERVER_PORT'] == 443) ? 'https://' : 'http://';
 		$host = $_SERVER['HTTP_HOST'] ?? '';
 		$base = strstr($protocol . $host . ($_SERVER['REQUEST_URI'] ?? ''), 'charity', true);
-		if ($objectType === 'cc_Case') {
-			$case = $this->caseMapper->find($objectId);
-			$folderName = $this->getCaseFolderName($case);
-		} else {
-			$folderName = $objectType . '/' . $objectId;
-		}
+		$folderName = $this->getSubFolderName($objectType, $objectId);
 		return $base . 'files/?dir=/Charity/' . $folderName . '&openfile=' . $fileId;
 	}
 }

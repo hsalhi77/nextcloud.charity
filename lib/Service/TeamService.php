@@ -161,6 +161,22 @@ class TeamService {
 	}
 
 	/**
+	 * Get users in a specific group.
+	 */
+	public function getUsersByGroup(string $groupName): array {
+		$group = $this->groupManager->get($groupName);
+		if (!$group) return [];
+		$result = [];
+		foreach ($group->getUsers() as $user) {
+			$result[] = [
+				'uid' => $user->getUID(),
+				'displayName' => $user->getDisplayName(),
+			];
+		}
+		return $result;
+	}
+
+	/**
 	 * Search Nextcloud users.
 	 */
 	public function searchUsers(?string $search): array {

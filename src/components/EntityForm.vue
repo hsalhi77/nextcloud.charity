@@ -1,5 +1,5 @@
 <template>
-	<form class="cm-entity-form" @submit.prevent="submit">
+	<form ref="form" class="cm-entity-form" @submit.prevent="submit">
 		<div v-if="loadingReferences" class="cm-entity-form__loading">
 			<NcLoadingIcon :size="32" />
 		</div>
@@ -32,30 +32,22 @@
 				:options="field.options"
 				:label="field.optionLabel || 'label'"
 				:reduce="field.optionValue ? v => v[field.optionValue] : v => v"
+				:required="field.required"
 				:placeholder="field.label" />
-		</div>
-
-		<div class="cm-entity-form__actions">
-			<NcButton type="secondary" @click="ui.closeSlidePanel">
-				{{ t('charity', 'Cancel') }}
-			</NcButton>
-			<NcButton type="primary" native-type="submit">
-				{{ submitLabel }}
-			</NcButton>
 		</div>
 	</form>
 </template>
 
 <script>
-import { NcButton, NcTextField, NcTextArea, NcSelect, NcLoadingIcon } from '@nextcloud/vue'
+import { NcTextField, NcTextArea, NcSelect, NcLoadingIcon } from '@nextcloud/vue'
 import { useUiStore } from '../stores/ui.js'
 import { useCasesStore, usePaymentsStore, useUpdatesStore, useCitiesStore, useCaseTypesStore, useUpdateTypesStore } from '../stores/entities.js'
+import { post } from '../services/api.js'
 import { translate as t } from '@nextcloud/l10n'
 
 export default {
 	name: 'EntityForm',
 	components: {
-		NcButton,
 		NcTextField,
 		NcTextArea,
 		NcSelect,
@@ -87,6 +79,7 @@ export default {
 		return {
 			form: {},
 			loadingReferences: false,
+			users: [],
 		}
 	},
 	computed: {
@@ -106,8 +99,8 @@ export default {
 					{ key: 'caseTypeId', label: t('charity', 'Case Type'), type: 'select', options: this.stores.cc_CaseType?.items || [], optionLabel: 'title', optionValue: 'id' },
 					{ key: 'dateAdded', label: t('charity', 'Date Added'), type: 'date' },
 					{ key: 'dob', label: t('charity', 'Date of Birth'), type: 'date' },
-					{ key: 'referredBy', label: t('charity', 'Referred By'), type: 'text' },
-					{ key: 'cityId', label: t('charity', 'City'), type: 'select', options: this.stores.cc_City?.items || [], optionLabel: 'title', optionValue: 'id' },
+					{ key: 'referredBy', label: t('charity', 'Referred By'), type: 'select', options: this.users, optionLabel: 'displayName', optionValue: 'uid', required: true },
+					{ key: 'cityId', label: t('charity', 'City'), type: 'select', options: this.stores.cc_City?.items || [], optionLabel: 'title', optionValue: 'id', required: true },
 					{ key: 'town', label: t('charity', 'Town'), type: 'text' },
 					{ key: 'location', label: t('charity', 'Location'), type: 'text' },
 					{ key: 'dependants', label: t('charity', 'Dependants'), type: 'number' },
@@ -116,18 +109,19 @@ export default {
 				]
 			case 'cc_Payment':
 				return [
-					{ key: 'caseId', label: t('charity', 'Case'), type: 'select', options: this.stores.cc_Case?.items || [], optionLabel: 'firstName', optionValue: 'id', required: true },
+					{ key: 'caseId', label: t('charity', 'Case'), type: 'select', options: [{ _displayLabel: t('charity', 'None') }, ...(this.stores.cc_Case?.items || []).map(c => ({ ...c, _displayLabel: String(c.id).padStart(10, '0') }))], optionLabel: '_displayLabel', optionValue: 'id' },
 					{ key: 'paymentDate', label: t('charity', 'Payment Date'), type: 'date', required: true },
-					{ key: 'paymentType', label: t('charity', 'Payment Type'), type: 'text' },
-					{ key: 'paymentReceipt', label: t('charity', 'Payment Receipt'), type: 'text' },
-					{ key: 'paidBy', label: t('charity', 'Paid By'), type: 'text' },
+					{ key: 'paymentType', label: t('charity', 'Payment Type'), type: 'select', options: [{ label: 'Payment' }, { label: 'Receipt' }], optionLabel: 'label', optionValue: 'label' },
+				{ key: 'paymentAmount', label: t('charity', 'Amount'), type: 'number', required: true },
+				{ key: 'paymentReference', label: t('charity', 'Payment Reference'), type: 'text' },
+				{ key: 'paidBy', label: t('charity', 'Paid By'), type: 'select', options: this.users, optionLabel: 'displayName', optionValue: 'uid' },
 				]
 			case 'cc_Update':
 				return [
-					{ key: 'caseId', label: t('charity', 'Case'), type: 'select', options: this.stores.cc_Case?.items || [], optionLabel: 'firstName', optionValue: 'id', required: true },
+					{ key: 'caseId', label: t('charity', 'Case'), type: 'select', options: (this.stores.cc_Case?.items || []).map(c => ({ ...c, _displayLabel: String(c.id).padStart(10, '0') })), optionLabel: '_displayLabel', optionValue: 'id', required: true },
 					{ key: 'updateDate', label: t('charity', 'Update Date'), type: 'date', required: true },
 					{ key: 'updateTypeId', label: t('charity', 'Update Type'), type: 'select', options: this.stores.cc_UpdateType?.items || [], optionLabel: 'title', optionValue: 'id' },
-					{ key: 'updateBy', label: t('charity', 'Updated By'), type: 'text' },
+					{ key: 'updateBy', label: t('charity', 'Updated By'), type: 'select', options: this.users, optionLabel: 'displayName', optionValue: 'uid' },
 					{ key: 'description', label: t('charity', 'Description'), type: 'textarea' },
 				]
 			case 'cc_City':
@@ -175,6 +169,15 @@ export default {
 					await this.stores[key].fetchAll()
 				}
 			}))
+			if (this.entityType === 'cc_Case' || this.entityType === 'cc_Payment' || this.entityType === 'cc_Update') {
+				try {
+					const result = await post('/team/usersByGroup', { params: { group: 'Charity' } })
+					this.users = result.data || []
+				} catch (e) {
+					console.error('Failed to load users', e)
+					this.users = []
+				}
+			}
 		},
 		async submit() {
 			const payload = { ...this.form }
@@ -196,7 +199,6 @@ export default {
 
 <style scoped>
 .cm-entity-form {
-	position: relative;
 	display: flex;
 	flex-direction: column;
 	gap: 20px;
@@ -216,13 +218,6 @@ export default {
 
 .cm-entity-form__required {
 	color: var(--color-error);
-}
-
-.cm-entity-form__actions {
-	display: flex;
-	justify-content: flex-end;
-	gap: 8px;
-	margin-top: 8px;
 }
 
 .cm-entity-form__loading {
