@@ -13,11 +13,11 @@
     <category>organization</category>
     <bugs>https://example.com</bugs>
     <dependencies>
-        <php min-version="7.4"/>
+        <php min-version="8.1"/>
         <database min-version="9.4">pgsql</database>
         <database>sqlite</database>
         <database min-version="5.5">mysql</database>
-        <nextcloud min-version="25" max-version="30"/>
+        <nextcloud min-version="25" max-version="32"/>
     </dependencies>
     <navigations>
         <navigation>

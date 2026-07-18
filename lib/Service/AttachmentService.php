@@ -10,10 +10,14 @@ use OCA\Charity\Db\cc_Case;
 use OCA\Charity\Db\cc_CaseMapper;
 use OCA\Charity\Db\cc_PaymentMapper;
 use OCA\Charity\Db\cc_UpdateMapper;
+use OCP\DB\Exception as DBException;
 use OCP\Files\File;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
 use OCP\Files\NotFoundException;
+use OCP\IConfig;
+use OCP\IDBConnection;
+use Psr\Log\LoggerInterface;
 
 class AttachmentService {
 	private cc_attachmentMapper $mapper;
@@ -22,6 +26,9 @@ class AttachmentService {
 	private cc_UpdateMapper $updateMapper;
 	private PermissionService $permissionService;
 	private IRootFolder $root;
+	private IConfig $config;
+	private IDBConnection $db;
+	private LoggerInterface $logger;
 	private ?string $userId;
 
 	public function __construct(
@@ -31,6 +38,9 @@ class AttachmentService {
 		cc_UpdateMapper $updateMapper,
 		PermissionService $permissionService,
 		IRootFolder $root,
+		IConfig $config,
+		IDBConnection $db,
+		LoggerInterface $logger,
 		$userId
 	) {
 		$this->mapper = $mapper;
@@ -39,16 +49,51 @@ class AttachmentService {
 		$this->updateMapper = $updateMapper;
 		$this->permissionService = $permissionService;
 		$this->root = $root;
+		$this->config = $config;
+		$this->db = $db;
+		$this->logger = $logger;
 		$this->userId = $userId;
 	}
 
 	/**
-	 * Get or create the Charity folder for the given user.
+	 * Get the configured Group Folder ID.
 	 */
-	public function getCasesFolder(string $userId): Folder {
-		$userFolder = $this->root->getUserFolder($userId);
-		$path = $userFolder->getPath() . '/Charity';
-		return $this->getOrCreateFolder($path);
+	private function getGroupFolderId(): string {
+		return $this->config->getAppValue('charity', 'groupFolderId', '1');
+	}
+
+	/**
+	 * Get the Group Folder mount point name from the database.
+	 */
+	private function getGroupFolderName(string $groupId): ?string {
+		try {
+			$qb = $this->db->getQueryBuilder();
+			$qb->select('mount_point')
+				->from('group_folders')
+				->where($qb->expr()->eq('folder_id', $qb->createNamedParameter($groupId)));
+			$result = $qb->executeQuery();
+			$row = $result->fetch();
+			$result->closeCursor();
+			return $row ? $row['mount_point'] : null;
+		} catch (DBException $e) {
+			return null;
+		}
+	}
+
+	/**
+	 * Get the Charity folder (Group Folder) via the current user's folder view.
+	 */
+	public function getCasesFolder(): Folder {
+		$groupId = $this->getGroupFolderId();
+		$groupName = $this->getGroupFolderName($groupId);
+		if (!$groupName) {
+			throw new \RuntimeException('Group folder not found: ' . $groupId);
+		}
+		if (!$this->userId) {
+			throw new \RuntimeException('No user ID available for group folder access');
+		}
+		$userFolder = $this->root->getUserFolder($this->userId);
+		return $userFolder->get($groupName);
 	}
 
 	/**
@@ -86,7 +131,7 @@ class AttachmentService {
 		$filename = str_replace([':', '-', ' '], '_', date('Y-m-d H:i:s')) . '_' . $file['name'];
 		$attachment->setName($filename);
 
-		$folder = $this->getObjectFolder($userId, $objectType, $objectId);
+		$folder = $this->getObjectFolder($objectType, $objectId);
 		$fileNode = $folder->newFile($filename);
 		$fileNode->putContent($base);
 
@@ -167,14 +212,14 @@ class AttachmentService {
 		}
 		$this->permissionService->checkPermission($this->caseMapper, $permObjectType, $permObjectId, Acl::PERMISSION_MANAGE);
 
-		$folder = $this->getObjectFolder($userId ?? $this->userId, $objectType, $objectId);
+		$folder = $this->getObjectFolder($objectType, $objectId);
 		try {
 			$file = $this->getFileByName($folder, $attachment->getName());
 			if ($file->isDeletable()) {
 				$file->delete();
 			}
 		} catch (NotFoundException $e) {
-			\OC::$server->getLogger()->warning('Charity: Attachment file not found for deletion: ' . $attachment->getName(), ['app' => 'charity']);
+			$this->logger->warning('Charity: Attachment file not found for deletion: ' . $attachment->getName(), ['app' => 'charity']);
 		}
 
 		$this->mapper->delete($attachment);
@@ -200,35 +245,34 @@ class AttachmentService {
 	/**
 	 * Delete the case attachment folder.
 	 */
-	public function deleteCaseFolder(int $caseId, string $userId): void {
+	public function deleteCaseFolder(int $caseId): void {
 		$case = $this->caseMapper->find($caseId);
 		if ($case === null) {
 			return;
 		}
-		$folder = $this->getCasesFolder($userId);
-		$path = $folder->getPath() . '/' . $this->getCaseFolderName($case);
-		$this->deleteFolderByPath($path);
+		$folder = $this->getCasesFolder();
+		$this->deleteSubFolder($folder, $this->getCaseFolderName($case));
 	}
 
 	/**
 	 * Delete an object's attachment folder (payments, updates, etc.).
 	 */
-	public function deleteObjectFolder(int $objectId, string $objectType, string $userId): void {
-		$folder = $this->getCasesFolder($userId);
-		$path = $folder->getPath() . '/' . $this->getSubFolderName($objectType, $objectId);
-		$this->deleteFolderByPath($path);
+	public function deleteObjectFolder(int $objectId, string $objectType): void {
+		$folder = $this->getCasesFolder();
+		$this->deleteSubFolder($folder, $this->getSubFolderName($objectType, $objectId));
 	}
 
-	private function deleteFolderByPath(string $path): void {
+	private function deleteSubFolder(Folder $parent, string $relativePath): void {
 		try {
-			if ($this->root->nodeExists($path)) {
-				$node = $this->root->get($path);
-				if ($node instanceof Folder && $node->isDeletable()) {
-					$node->delete();
-				}
+			if (!$parent->nodeExists($relativePath)) {
+				return;
+			}
+			$node = $parent->get($relativePath);
+			if ($node instanceof Folder && $node->isDeletable()) {
+				$node->delete();
 			}
 		} catch (\OCP\Files\NotFoundException $e) {
-			\OC::$server->getLogger()->warning('Charity: Folder not found for deletion: ' . $path, ['app' => 'charity']);
+			$this->logger->warning('Charity: Folder not found for deletion: ' . $relativePath, ['app' => 'charity']);
 		}
 	}
 
@@ -274,32 +318,31 @@ class AttachmentService {
 	/**
 	 * Get or create the attachment folder for a specific case.
 	 */
-	public function getCaseFolder(cc_Case $case, string $userId): Folder {
-		$folder = $this->getCasesFolder($userId);
+	public function getCaseFolder(cc_Case $case): Folder {
+		$folder = $this->getCasesFolder();
 		$existing = $this->findExistingCaseFolder($folder, $case);
 		if ($existing !== null) {
 			return $existing;
 		}
-		$path = $folder->getPath() . '/' . $this->getCaseFolderName($case);
-		return $this->getOrCreateFolder($path);
+		return $this->getOrCreateSubFolder($folder, $this->getCaseFolderName($case));
 	}
 
 	/**
 	 * Get or create the folder for an object's attachments.
 	 */
-	private function getObjectFolder(string $userId, string $objectType, int $objectId): Folder {
-		$folder = $this->getCasesFolder($userId);
+	private function getObjectFolder(string $objectType, int $objectId): Folder {
+		$folder = $this->getCasesFolder();
 		if ($objectType === 'cc_Case') {
 			$case = $this->caseMapper->find($objectId);
 			$existing = $this->findExistingCaseFolder($folder, $case);
 			if ($existing !== null) {
 				return $existing;
 			}
-			$path = $folder->getPath() . '/' . $this->getSubFolderName($objectType, $objectId);
+			$name = $this->getCaseFolderName($case);
 		} else {
-			$path = $folder->getPath() . '/' . $this->getSubFolderName($objectType, $objectId);
+			$name = $this->getSubFolderName($objectType, $objectId);
 		}
-		return $this->getOrCreateFolder($path);
+		return $this->getOrCreateSubFolder($folder, $name);
 	}
 
 	private function getSubFolderName(string $objectType, int $objectId): string {
@@ -319,7 +362,19 @@ class AttachmentService {
 	 * Build a folder-safe name for a case attachment directory.
 	 */
 	private function getCaseFolderName(cc_Case $case): string {
-		return sprintf('%010d', $case->getId());
+		$fn = $case->getFirstName() ?? '';
+		$ln = $case->getLastName() ?? '';
+		$safeName = $this->sanitizeFolderName($fn . ' ' . $ln);
+		return sprintf('%010d', $case->getId()) . ' - ' . $safeName;
+	}
+
+	/**
+	 * Sanitize a string for use in folder names.
+	 */
+	private function sanitizeFolderName(string $name): string {
+		$trimmed = trim($name);
+		$clean = preg_replace('/[\/:?"<>|]/', '', $trimmed);
+		return $clean ?: 'Case';
 	}
 
 	/**
@@ -334,6 +389,7 @@ class AttachmentService {
 			}
 		}
 		$oldNames = [
+			sprintf('%010d', $case->getId()),
 			sprintf('%06d', $case->getId()),
 			'Case-' . $case->getId() . '-' . $case->getFirstName() . '-' . $case->getLastName(),
 			'Case-' . $case->getId(),
@@ -364,6 +420,26 @@ class AttachmentService {
 	}
 
 	/**
+	 * Get or create a subfolder relative to a parent folder, supporting nested paths.
+	 */
+	private function getOrCreateSubFolder(Folder $parent, string $relativePath): Folder {
+		$parts = array_filter(explode('/', $relativePath), fn($p) => $p !== '');
+		$current = $parent;
+		foreach ($parts as $part) {
+			if ($current->nodeExists($part)) {
+				$node = $current->get($part);
+				if (!$node instanceof Folder) {
+					throw new \RuntimeException('Path exists but is not a folder: ' . $part);
+				}
+				$current = $node;
+			} else {
+				$current = $current->newFolder($part);
+			}
+		}
+		return $current;
+	}
+
+	/**
 	 * Retrieve a file by name from a folder.
 	 */
 	private function getFileByName(Folder $folder, string $name): File {
@@ -381,7 +457,8 @@ class AttachmentService {
 		$protocol = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || $_SERVER['SERVER_PORT'] == 443) ? 'https://' : 'http://';
 		$host = $_SERVER['HTTP_HOST'] ?? '';
 		$base = strstr($protocol . $host . ($_SERVER['REQUEST_URI'] ?? ''), 'charity', true);
+		$groupName = $this->getGroupFolderName($this->getGroupFolderId()) ?? 'Charity';
 		$folderName = $this->getSubFolderName($objectType, $objectId);
-		return $base . 'files/?dir=/Charity/' . $folderName . '&openfile=' . $fileId;
+		return $base . 'files/?dir=/' . $groupName . '/' . $folderName . '&openfile=' . $fileId;
 	}
 }

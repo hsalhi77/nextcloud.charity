@@ -13,6 +13,7 @@ use OCP\App\IAppManager;
 use OCP\IGroupManager;
 use OCP\IUserManager;
 use OCP\Server;
+use Psr\Log\LoggerInterface;
 
 class TeamService {
 	private CirclesManager $circlesManager;
@@ -21,6 +22,7 @@ class TeamService {
 	private IGroupManager $groupManager;
 	private ?string $userId;
 	private bool $circlesEnabled;
+	private LoggerInterface $logger;
 
 	public function __construct(
 		CirclesManager $circlesManager,
@@ -28,6 +30,7 @@ class TeamService {
 		IUserManager $userManager,
 		IGroupManager $groupManager,
 		IAppManager $appManager,
+		LoggerInterface $logger,
 		$userId
 	) {
 		$this->circlesManager = $circlesManager;
@@ -36,6 +39,7 @@ class TeamService {
 		$this->groupManager = $groupManager;
 		$this->userId = $userId;
 		$this->circlesEnabled = $appManager->isEnabledForUser('circles');
+		$this->logger = $logger;
 	}
 
 	/**
@@ -51,7 +55,7 @@ class TeamService {
 			$this->circlesManager->startSession($owner);
 			return $this->circlesManager->createCircle($name, $owner)->getSingleId();
 		} catch (\Throwable $e) {
-			\OC::$server->getLogger()->error('Charity: Failed to create case circle: ' . $e->getMessage(), ['app' => 'charity']);
+			$this->logger->error('Charity: Failed to create case circle: ' . $e->getMessage(), ['app' => 'charity']);
 			return null;
 		}
 	}
@@ -82,7 +86,7 @@ class TeamService {
 
 			return true;
 		} catch (\Throwable $e) {
-			\OC::$server->getLogger()->error('Charity: Failed to add member: ' . $e->getMessage(), ['app' => 'charity']);
+			$this->logger->error('Charity: Failed to add member: ' . $e->getMessage(), ['app' => 'charity']);
 			return false;
 		}
 	}
@@ -114,7 +118,7 @@ class TeamService {
 			try {
 				$memberRequest->delete($member);
 			} catch (\Throwable $e) {
-				\OC::$server->getLogger()->error('Charity: delete member failed: ' . $e->getMessage(), ['app' => 'charity']);
+				$this->logger->error('Charity: delete member failed: ' . $e->getMessage(), ['app' => 'charity']);
 				return false;
 			}
 
@@ -122,12 +126,12 @@ class TeamService {
 				$federatedUser = $this->circlesManager->getFederatedUser($member->getUserId(), Member::TYPE_USER);
 				$this->membershipService->deleteFederatedUser($federatedUser);
 			} catch (\Throwable $e) {
-				\OC::$server->getLogger()->error('Charity: deleteFederatedUser failed: ' . $e->getMessage(), ['app' => 'charity']);
+				$this->logger->error('Charity: deleteFederatedUser failed: ' . $e->getMessage(), ['app' => 'charity']);
 			}
 
 			return true;
 		} catch (\Throwable $e) {
-			\OC::$server->getLogger()->error('Charity: Failed to delete member: ' . $e->getMessage(), ['app' => 'charity']);
+			$this->logger->error('Charity: Failed to delete member: ' . $e->getMessage(), ['app' => 'charity']);
 		}
 
 		return false;
@@ -154,7 +158,7 @@ class TeamService {
 				}
 			}
 		} catch (\Throwable $e) {
-			\OC::$server->getLogger()->error('Charity: Failed to get circle members: ' . $e->getMessage(), ['app' => 'charity']);
+			$this->logger->error('Charity: Failed to get circle members: ' . $e->getMessage(), ['app' => 'charity']);
 		}
 
 		return $result;
@@ -174,6 +178,53 @@ class TeamService {
 			];
 		}
 		return $result;
+	}
+
+	/**
+	 * Get the current user's group IDs.
+	 */
+	public function getUserGroups(): array {
+		if (!$this->userId) return [];
+		$user = $this->userManager->get($this->userId);
+		if (!$user) return [];
+		return $this->groupManager->getUserGroupIds($user);
+	}
+
+	/**
+	 * Check if current user is in a specific group (case-insensitive).
+	 */
+	public function userInGroup(string $groupName): bool {
+		$lower = strtolower($groupName);
+		foreach ($this->getUserGroups() as $g) {
+			if (strtolower($g) === $lower) return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Check if current user has admin-level access (Charity Admin or Admin).
+	 */
+	public function isAdmin(): bool {
+		return $this->userInGroup('Admin') || $this->userInGroup('Charity Admin');
+	}
+
+	/**
+	 * Get users in a group, filtered by role.
+	 * Charity users only see themselves.
+	 */
+	public function getUsersByGroupFiltered(string $groupName): array {
+		if ($this->isAdmin()) {
+			return $this->getUsersByGroup($groupName);
+		}
+		if (!$this->userId) return [];
+		$user = $this->userManager->get($this->userId);
+		if (!$user) return [];
+		return [
+			[
+				'uid' => $user->getUID(),
+				'displayName' => $user->getDisplayName(),
+			],
+		];
 	}
 
 	/**

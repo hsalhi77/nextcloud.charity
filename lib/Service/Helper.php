@@ -28,8 +28,9 @@ class Helper
     /** @var IUserSession */
     private $userSession;
 
-    public function __construct()
+    public function __construct(LoggerInterface $logger)
     {
+        $this->logger = $logger;
     }
 
 
@@ -61,7 +62,7 @@ class Helper
     }
 
     private function buildErrorResponse(\Throwable $e, int $status): JSONResponse {
-        \OC::$server->getLogger()->error($e->getLine() . ' ' . $e->getTraceAsString());
+        $this->logger->error($e->getLine() . ' ' . $e->getTraceAsString());
         return new JSONResponse([
             'message' => $e->getMessage(),
             'data' => [],

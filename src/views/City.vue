@@ -32,6 +32,7 @@ import PlusIcon from 'vue-material-design-icons/Plus.vue'
 import EntityTable from '../components/EntityTable.vue'
 import { useCitiesStore } from '../stores/entities.js'
 import { useUiStore } from '../stores/ui.js'
+import { useUserStore } from '../stores/user.js'
 import { translate as t } from '@nextcloud/l10n'
 
 export default {
@@ -45,22 +46,29 @@ export default {
 	setup() {
 		const citiesStore = useCitiesStore()
 		const ui = useUiStore()
+		const userStore = useUserStore()
 		return {
 			citiesStore,
 			ui,
+			userStore,
 			t,
 		}
 	},
-	data() {
-		return {
-			columns: [
+	computed: {
+		columns() {
+			return [
 				{ key: 'title', label: t('charity', 'Title') },
-			],
-			actions: [
+			]
+		},
+		actions() {
+			const base = [
 				{ name: 'edit', label: t('charity', 'Edit'), icon: 'icon-edit' },
-				{ name: 'delete', label: t('charity', 'Delete'), icon: 'icon-delete' },
-			],
-		}
+			]
+			if (this.userStore.isAdmin) {
+				base.push({ name: 'delete', label: t('charity', 'Delete'), icon: 'icon-delete' })
+			}
+			return base
+		},
 	},
 	async mounted() {
 		await this.citiesStore.fetchAll()

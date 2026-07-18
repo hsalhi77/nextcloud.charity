@@ -394,10 +394,12 @@ export default {
 			}
 		},
 		openPayment(id) {
-			this.ui.openSlidePanel({ mode: 'detail', entityType: 'cc_Payment', entityId: id })
+			this.ui.closeSlidePanel()
+			this.$router.push({ name: 'payments', query: { highlight: id } })
 		},
 		openUpdate(id) {
-			this.ui.openSlidePanel({ mode: 'detail', entityType: 'cc_Update', entityId: id })
+			this.ui.closeSlidePanel()
+			this.$router.push({ name: 'updates', query: { highlight: id } })
 		},
 		formatValue(item, field) {
 			let value = item[field.key]

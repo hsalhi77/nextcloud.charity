@@ -31,9 +31,9 @@ use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Db\MultipleObjectsReturnedException;
 use OCP\IConfig;
 use OCP\IGroupManager;
-use OCP\ILogger;
 use OCP\IUserManager;
 use OCP\Share\IManager;
+use Psr\Log\LoggerInterface;
 
 class PermissionService {
 	/** @var cc_CaseMapper */
@@ -42,7 +42,7 @@ class PermissionService {
 	/** @var AclMapper */
 	private $aclMapper;
 
-	/** @var ILogger */
+	/** @var LoggerInterface */
 	private $logger;
 
 	/** @var IUserManager */
@@ -66,7 +66,7 @@ class PermissionService {
 	private $circlesEnabled = false;
 
 	public function __construct(
-		ILogger $logger,
+		LoggerInterface $logger,
 		AclMapper $aclMapper,
 		cc_CaseMapper $caseMapper,
 		IUserManager $userManager,

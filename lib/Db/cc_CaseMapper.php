@@ -25,9 +25,14 @@ class cc_CaseMapper extends CharityMapper {
         return $this->findEntitiesString($sql, []);
     }
 
-    public function findAllByUser($userId, $param = []) {
-        $sql = 'SELECT *, 0 as shared FROM `*PREFIX*cc_case` WHERE owner = ? AND isactive = 1';
-        $bindings = [$userId];
+    public function findAllByUser($userId, $param = [], $admin = false) {
+        if ($admin) {
+            $sql = 'SELECT *, 0 as shared FROM `*PREFIX*cc_case` WHERE isactive = 1';
+            $bindings = [];
+        } else {
+            $sql = 'SELECT *, 0 as shared FROM `*PREFIX*cc_case` WHERE owner = ? AND isactive = 1';
+            $bindings = [$userId];
+        }
         foreach ($param as $key => $val) {
             if ($key === '' || $key[0] === '_' || $val === '') {
                 continue;

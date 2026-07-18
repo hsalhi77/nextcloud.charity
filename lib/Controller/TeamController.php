@@ -76,7 +76,17 @@ class TeamController extends Controller {
         return $this->helper->handleErrorResponse(function () {
             $params = $this->request->getParams()['params'] ?? [];
             $groupName = $params['group'] ?? 'Charity';
-            return $this->service->getUsersByGroup($groupName);
+            return $this->service->getUsersByGroupFiltered($groupName);
+        });
+    }
+
+    /**
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     */
+    public function userGroups() {
+        return $this->helper->handleErrorResponse(function () {
+            return $this->service->getUserGroups();
         });
     }
 }

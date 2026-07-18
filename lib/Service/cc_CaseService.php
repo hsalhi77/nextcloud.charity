@@ -51,7 +51,8 @@ class cc_CaseService {
 
 	public function findAll($param = []) {
 		$userInfo = $this->getPrerequisites();
-		$userItems = $this->mapper->findAllByUser($userInfo['user'], $param);
+		$admin = $this->teamService->isAdmin();
+		$userItems = $this->mapper->findAllByUser($userInfo['user'], $param, $admin);
 		$result = [];
 		foreach ($userItems as &$item) {
 			if ($item === null) continue;
@@ -116,7 +117,7 @@ class cc_CaseService {
 
 		$item = $this->mapper->insert($item);
 
-		$this->attachmentService->getCaseFolder($item, $this->userId);
+		$this->attachmentService->getCaseFolder($item);
 
 		if ($item->getCircleId()) {
 			$this->aclService->addAcl('cc_Case', $item->getId(), $this->userId, Acl::PERMISSION_TYPE_CIRCLE, $item->getCircleId(), 1, 1, 1);
@@ -153,6 +154,9 @@ class cc_CaseService {
 	}
 
 	public function delete($id) {
+		if (!$this->teamService->isAdmin()) {
+			throw new NoPermissionException('Only Admin and Charity Admin users can delete records.');
+		}
 		$this->permissionService->checkPermission($this->mapper, 'cc_Case', $id, Acl::PERMISSION_MANAGE);
 		$item = $this->mapper->find($id);
 
@@ -167,7 +171,7 @@ class cc_CaseService {
 		}
 
 		$this->attachmentService->deleteAllInCase($id, 'cc_Case', $this->userId);
-		$this->attachmentService->deleteCaseFolder($id, $this->userId);
+		$this->attachmentService->deleteCaseFolder($id);
 
 		$item->setIsactive(0);
 		$this->mapper->update($item);

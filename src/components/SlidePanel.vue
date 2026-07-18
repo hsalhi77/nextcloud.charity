@@ -1,35 +1,37 @@
 <template>
 	<transition name="slide">
-		<aside class="cm-slide-panel" role="dialog" aria-modal="true">
-			<header class="cm-slide-panel__header">
-				<h2>{{ title }}</h2>
-				<NcButton type="tertiary" :aria-label="t('charity', 'Close panel')" @click="ui.closeSlidePanel">
-					<template #icon>
-						<CloseIcon :size="20" />
-					</template>
-				</NcButton>
-			</header>
-			<div class="cm-slide-panel__content">
-				<EntityForm
-					v-if="ui.slidePanelMode === 'add' || ui.slidePanelMode === 'edit'"
-					ref="entityForm"
-					:mode="ui.slidePanelMode"
-					:entity-type="ui.slidePanelEntityType"
-					:entity="ui.slidePanelEntity" />
-				<EntityDetail
-					v-else
-					:entity-type="ui.slidePanelEntityType"
-					:entity-id="ui.slidePanelEntityId" />
-			</div>
-			<div v-if="ui.slidePanelMode === 'add' || ui.slidePanelMode === 'edit'" class="cm-slide-panel__footer">
-				<NcButton type="secondary" @click="ui.closeSlidePanel">
-					{{ t('charity', 'Cancel') }}
-				</NcButton>
-				<NcButton type="primary" @click="submitForm">
-					{{ submitLabel }}
-				</NcButton>
-			</div>
-		</aside>
+		<div class="cm-slide-panel-overlay" @click="ui.closeSlidePanel">
+			<aside class="cm-slide-panel" role="dialog" aria-modal="true" @click.stop>
+				<header class="cm-slide-panel__header">
+					<h2>{{ title }}</h2>
+					<NcButton type="tertiary" :aria-label="t('charity', 'Close panel')" @click="ui.closeSlidePanel">
+						<template #icon>
+							<CloseIcon :size="20" />
+						</template>
+					</NcButton>
+				</header>
+				<div class="cm-slide-panel__content">
+					<EntityForm
+						v-if="ui.slidePanelMode === 'add' || ui.slidePanelMode === 'edit'"
+						ref="entityForm"
+						:mode="ui.slidePanelMode"
+						:entity-type="ui.slidePanelEntityType"
+						:entity="ui.slidePanelEntity" />
+					<EntityDetail
+						v-else
+						:entity-type="ui.slidePanelEntityType"
+						:entity-id="ui.slidePanelEntityId" />
+				</div>
+				<div v-if="ui.slidePanelMode === 'add' || ui.slidePanelMode === 'edit'" class="cm-slide-panel__footer">
+					<NcButton type="secondary" @click="ui.closeSlidePanel">
+						{{ t('charity', 'Cancel') }}
+					</NcButton>
+					<NcButton type="primary" @click="submitForm">
+						{{ submitLabel }}
+					</NcButton>
+				</div>
+			</aside>
+		</div>
 	</transition>
 </template>
 
@@ -77,29 +79,38 @@ export default {
 </script>
 
 <style scoped>
-.cm-slide-panel {
-	position: absolute;
+.cm-slide-panel-overlay {
+	position: fixed;
 	top: 0;
-	inset-inline-end: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 9998;
+	background: rgba(0, 0, 0, 0.2);
+}
+
+.cm-slide-panel {
+	position: fixed;
+	top: 50px;
+	right: 0;
 	bottom: 0;
 	width: min(420px, 100vw);
 	max-width: 100vw;
 	background: var(--color-main-background);
-	border-inline-start: 1px solid var(--color-border);
+	border-left: 1px solid var(--color-border);
 	box-shadow: var(--color-box-shadow);
-	z-index: 100;
+	z-index: 9999;
+	display: flex;
+	flex-direction: column;
 }
 
 .cm-slide-panel__header {
-	position: absolute;
-	top: 0;
-	inset-inline-start: 0;
-	inset-inline-end: 0;
-	height: 32px;
+	flex-shrink: 0;
+	height: 44px;
 	display: flex;
 	align-items: center;
 	justify-content: flex-end;
-	padding: 2px 12px;
+	padding: 0 12px;
 }
 
 .cm-slide-panel__header h2 {
@@ -107,26 +118,20 @@ export default {
 }
 
 .cm-slide-panel__content {
-	position: absolute;
-	top: 32px;
-	bottom: 56px;
-	inset-inline-start: 0;
-	inset-inline-end: 0;
+	flex: 1;
+	min-height: 0;
 	overflow-y: auto;
 	padding: 4px 16px 16px;
 }
 
 .cm-slide-panel__footer {
-	position: absolute;
-	bottom: 0;
-	inset-inline-start: 0;
-	inset-inline-end: 0;
-	height: 56px;
+	flex-shrink: 0;
+	height: 48px;
 	display: flex;
 	align-items: center;
 	justify-content: flex-end;
 	gap: 8px;
-	padding: 0 16px;
+	padding: 12px 16px;
 	border-top: 1px solid var(--color-border);
 	background: var(--color-main-background);
 }

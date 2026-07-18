@@ -32,6 +32,7 @@ import PlusIcon from 'vue-material-design-icons/Plus.vue'
 import EntityTable from '../components/EntityTable.vue'
 import { useUpdatesStore, useCasesStore, useUpdateTypesStore } from '../stores/entities.js'
 import { useUiStore } from '../stores/ui.js'
+import { useUserStore } from '../stores/user.js'
 import { translate as t } from '@nextcloud/l10n'
 
 export default {
@@ -47,23 +48,26 @@ export default {
 		const casesStore = useCasesStore()
 		const updateTypesStore = useUpdateTypesStore()
 		const ui = useUiStore()
+		const userStore = useUserStore()
 		return {
 			updatesStore,
 			casesStore,
 			updateTypesStore,
 			ui,
+			userStore,
 			t,
 		}
 	},
-	data() {
-		return {
-			actions: [
-				{ name: 'edit', label: t('charity', 'Edit'), icon: 'icon-edit' },
-				{ name: 'delete', label: t('charity', 'Delete'), icon: 'icon-delete' },
-			],
-		}
-	},
 	computed: {
+		actions() {
+			const base = [
+				{ name: 'edit', label: t('charity', 'Edit'), icon: 'icon-edit' },
+			]
+			if (this.userStore.isAdminOrCharityAdmin) {
+				base.push({ name: 'delete', label: t('charity', 'Delete'), icon: 'icon-delete' })
+			}
+			return base
+		},
 		columns() {
 			return [
 				{ key: 'id', label: t('charity', '#'), width: '8%', formatter: this.formatId },
@@ -81,6 +85,12 @@ export default {
 			this.casesStore.fetchAll(),
 			this.updateTypesStore.fetchAll(),
 		])
+		if (this.$route.query.highlight) {
+			const id = Number(this.$route.query.highlight)
+			const item = this.updatesStore.items.find(i => i.id === id)
+			if (item) this.openDetailPanel(item)
+			this.$router.replace({ name: 'updates' })
+		}
 	},
 	methods: {
 		formatId(id) {

@@ -32,6 +32,7 @@ import PlusIcon from 'vue-material-design-icons/Plus.vue'
 import EntityTable from '../components/EntityTable.vue'
 import { useCasesStore, useCaseTypesStore } from '../stores/entities.js'
 import { useUiStore } from '../stores/ui.js'
+import { useUserStore } from '../stores/user.js'
 import { translate as t } from '@nextcloud/l10n'
 
 export default {
@@ -46,24 +47,27 @@ export default {
 		const casesStore = useCasesStore()
 		const caseTypesStore = useCaseTypesStore()
 		const ui = useUiStore()
+		const userStore = useUserStore()
 		return {
 			casesStore,
 			caseTypesStore,
 			ui,
+			userStore,
 			t,
 		}
 	},
-	data() {
-		return {
-			actions: [
+		computed: {
+		actions() {
+			const base = [
 				{ name: 'addPayment', label: t('charity', '[+] Payment') },
 				{ name: 'addUpdate', label: t('charity', '[+] Update') },
 				{ name: 'edit', label: t('charity', 'Edit'), icon: 'icon-edit' },
-				{ name: 'delete', label: t('charity', 'Delete'), icon: 'icon-delete' },
-			],
-		}
-	},
-	computed: {
+			]
+			if (this.userStore.isAdminOrCharityAdmin) {
+				base.push({ name: 'delete', label: t('charity', 'Delete'), icon: 'icon-delete' })
+			}
+			return base
+		},
 		columns() {
 			return [
 				{ key: 'id', label: t('charity', '#'), width: '8%', formatter: this.formatId },

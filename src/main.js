@@ -4,6 +4,7 @@ import { generateFilePath, getRootUrl } from '@nextcloud/router'
 import App from './App.vue'
 import router from './router'
 import { createPinia, PiniaVuePlugin } from 'pinia'
+import { useUserStore } from './stores/user.js'
 
 Vue.use(PiniaVuePlugin)
 const pinia = createPinia()
@@ -14,9 +15,15 @@ Vue.prototype.n = translatePlural
 // CSP hack for Nextcloud webpack dev server
 __webpack_nonce__ = btoa(getRootUrl() + generateFilePath('charity', '', 'js/'))
 
-export default new Vue({
+const app = new Vue({
     el: '#app',
     router,
     pinia,
     render: h => h(App),
 })
+
+// Fetch user groups on load
+const userStore = useUserStore()
+userStore.fetchGroups()
+
+export default app

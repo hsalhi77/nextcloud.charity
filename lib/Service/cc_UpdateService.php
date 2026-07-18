@@ -3,16 +3,19 @@ namespace OCA\Charity\Service;
 
 use OCA\Charity\Db\cc_Update;
 use OCA\Charity\Db\cc_UpdateMapper;
+use OCA\Charity\Exceptions\NoPermissionException;
 use OCP\AppFramework\Db\DoesNotExistException;
 
 class cc_UpdateService {
 	private $mapper;
 	private AttachmentService $attachmentService;
+	private TeamService $teamService;
 	private ?string $userId;
 
-	public function __construct(cc_UpdateMapper $mapper, AttachmentService $attachmentService, $userId) {
+	public function __construct(cc_UpdateMapper $mapper, AttachmentService $attachmentService, TeamService $teamService, $userId) {
 		$this->mapper = $mapper;
 		$this->attachmentService = $attachmentService;
+		$this->teamService = $teamService;
 		$this->userId = $userId;
 	}
 
@@ -53,8 +56,11 @@ class cc_UpdateService {
 	}
 
 	public function delete($id) {
+		if (!$this->teamService->isAdmin()) {
+			throw new NoPermissionException('Only Admin and Charity Admin users can delete records.');
+		}
 		$this->attachmentService->deleteAllForObject($id, 'cc_Update', $this->userId);
-		$this->attachmentService->deleteObjectFolder($id, 'cc_Update', $this->userId);
+		$this->attachmentService->deleteObjectFolder($id, 'cc_Update');
 		$item = $this->mapper->find($id);
 		return $this->mapper->delete($item);
 	}

@@ -11,6 +11,26 @@
 			</NcCheckboxRadioSwitch>
 		</div>
 
+		<div class="cm-settings__setting">
+			<label for="groupFolderId" class="cm-settings__label">
+				{{ t('charity', 'Storage Group Folder') }}
+			</label>
+			<select id="groupFolderId"
+				v-model="groupFolderId"
+				class="cm-settings__select"
+				@change="saveGroupFolderId">
+				<option v-for="folder in groupFolders" :key="folder.id" :value="folder.id">
+					{{ folder.name }}
+				</option>
+			</select>
+			<p class="cm-settings__hint">
+				{{ t('charity', 'Selected folder: {folder}', { folder: selectedFolderName }) }}
+			</p>
+			<p class="cm-settings__hint">
+				{{ t('charity', 'Case folders and attachments will be stored inside this Group Folder') }}
+			</p>
+		</div>
+
 		<div v-if="loading" class="cm-view__loading">
 			<NcLoadingIcon :size="32" />
 		</div>
@@ -75,17 +95,34 @@ export default {
 		return {
 			loading: false,
 			createTeamForCase: true,
+			groupFolderId: '1',
+			groupFolders: [],
 			users: [],
 		}
 	},
 	async mounted() {
-		await Promise.all([this.loadConfig(), this.loadUsers()])
+		await Promise.all([this.loadConfig(), this.loadGroupFolders(), this.loadUsers()])
+	},
+	computed: {
+		selectedFolderName() {
+			const folder = this.groupFolders.find(f => f.id === this.groupFolderId)
+			return folder?.name || this.groupFolderId
+		},
 	},
 	methods: {
 		async loadConfig() {
 			try {
 				const config = unwrap(await get('/api/v1.0/config'))
 				this.createTeamForCase = config.createTeamForCase !== false
+				this.groupFolderId = config.groupFolderId || '1'
+			} catch (err) {
+				console.error(err)
+			}
+		},
+		async loadGroupFolders() {
+			try {
+				const folders = unwrap(await get('/api/v1.0/config/groupFolders'))
+				this.groupFolders = Array.isArray(folders) ? folders : []
 			} catch (err) {
 				console.error(err)
 			}
@@ -123,6 +160,13 @@ export default {
 				console.error(err)
 			}
 		},
+		async saveGroupFolderId() {
+			try {
+				await post('/api/v1.0/config/groupFolderId', { value: this.groupFolderId })
+			} catch (err) {
+				console.error(err)
+			}
+		},
 	},
 }
 </script>
@@ -140,6 +184,29 @@ export default {
     border: 1px solid var(--color-border);
     border-radius: var(--border-radius-large);
     background: var(--color-main-background);
+}
+
+.cm-settings__label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 4px;
+    font-size: 13px;
+}
+
+.cm-settings__select {
+    width: 100%;
+    max-width: 200px;
+    padding: 6px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    font-size: 13px;
+    background: var(--color-main-background);
+}
+
+.cm-settings__hint {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--color-text-maxcontrast);
 }
 
 .cm-settings__table {

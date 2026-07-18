@@ -3,16 +3,19 @@ namespace OCA\Charity\Service;
 
 use OCA\Charity\Db\cc_Payment;
 use OCA\Charity\Db\cc_PaymentMapper;
+use OCA\Charity\Exceptions\NoPermissionException;
 use OCP\AppFramework\Db\DoesNotExistException;
 
 class cc_PaymentService {
 	private $mapper;
 	private AttachmentService $attachmentService;
+	private TeamService $teamService;
 	private ?string $userId;
 
-	public function __construct(cc_PaymentMapper $mapper, AttachmentService $attachmentService, $userId) {
+	public function __construct(cc_PaymentMapper $mapper, AttachmentService $attachmentService, TeamService $teamService, $userId) {
 		$this->mapper = $mapper;
 		$this->attachmentService = $attachmentService;
+		$this->teamService = $teamService;
 		$this->userId = $userId;
 	}
 
@@ -57,8 +60,11 @@ class cc_PaymentService {
 	}
 
 	public function delete($id) {
+		if (!$this->teamService->isAdmin()) {
+			throw new NoPermissionException('Only Admin and Charity Admin users can delete records.');
+		}
 		$this->attachmentService->deleteAllForObject($id, 'cc_Payment', $this->userId);
-		$this->attachmentService->deleteObjectFolder($id, 'cc_Payment', $this->userId);
+		$this->attachmentService->deleteObjectFolder($id, 'cc_Payment');
 		$item = $this->mapper->find($id);
 		return $this->mapper->delete($item);
 	}
