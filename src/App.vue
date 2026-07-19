@@ -2,6 +2,11 @@
 	<NcContent app-name="charity" class="charity-app">
 		<NcAppNavigation>
 			<template #list>
+				<NcAppNavigationItem :to="{ name: 'dashboard' }" :name="t('charity', 'Dashboard')" :active="isActive('dashboard')">
+					<template #icon>
+						<ChartBoxIcon :size="20" />
+					</template>
+				</NcAppNavigationItem>
 				<NcAppNavigationItem :to="{ name: 'cases' }" :name="t('charity', 'Cases')" :active="isActive('cases')">
 					<template #icon>
 						<LayersIcon :size="20" />
@@ -54,6 +59,7 @@ import {
 	NcAppNavigationItem,
 	NcContent,
 } from '@nextcloud/vue'
+import ChartBoxIcon from 'vue-material-design-icons/ChartBox.vue'
 import LayersIcon from 'vue-material-design-icons/Layers.vue'
 import CashIcon from 'vue-material-design-icons/Cash.vue'
 import BellIcon from 'vue-material-design-icons/Bell.vue'
@@ -73,6 +79,7 @@ export default {
 		NcAppNavigation,
 		NcAppNavigationItem,
 		NcContent,
+		ChartBoxIcon,
 		LayersIcon,
 		CashIcon,
 		BellIcon,

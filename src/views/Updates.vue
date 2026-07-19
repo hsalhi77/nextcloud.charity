@@ -9,8 +9,17 @@
 					</template>
 					{{ t('charity', 'Add Update') }}
 				</NcButton>
+				<NcButton type="secondary" @click="filtersVisible = !filtersVisible">
+					{{ t('charity', 'Filters') }}
+				</NcButton>
 			</div>
 		</header>
+
+		<EntityFilter
+			v-if="filtersVisible"
+			:fields="filterFields"
+			@filter="applyFilters"
+			@clear="clearFilters" />
 
 		<div v-if="updatesStore.loading" class="cm-view__loading">
 			<NcLoadingIcon :size="32" />
@@ -30,6 +39,7 @@
 import { NcButton, NcLoadingIcon } from '@nextcloud/vue'
 import PlusIcon from 'vue-material-design-icons/Plus.vue'
 import EntityTable from '../components/EntityTable.vue'
+import EntityFilter from '../components/EntityFilter.vue'
 import { useUpdatesStore, useCasesStore, useUpdateTypesStore } from '../stores/entities.js'
 import { useUiStore } from '../stores/ui.js'
 import { useUserStore } from '../stores/user.js'
@@ -42,6 +52,7 @@ export default {
 		NcLoadingIcon,
 		PlusIcon,
 		EntityTable,
+		EntityFilter,
 	},
 	setup() {
 		const updatesStore = useUpdatesStore()
@@ -58,7 +69,27 @@ export default {
 			t,
 		}
 	},
+	data() {
+		return {
+			filtersVisible: false,
+			filters: {},
+		}
+	},
 	computed: {
+		caseOptions() {
+			return this.casesStore.items.map(c => ({
+				id: c.id,
+				title: `${String(c.id).padStart(10, '0')} - ${c.firstName || ''} ${c.lastName || ''}`.trim(),
+			}))
+		},
+		filterFields() {
+			return [
+				{ key: 'caseId', label: t('charity', 'Case'), type: 'select', options: this.caseOptions, optionLabel: 'title', optionValue: 'id' },
+				{ key: 'updateDate', label: t('charity', 'Update Date'), type: 'text', inputType: 'date' },
+				{ key: 'updateTypeId', label: t('charity', 'Update Type'), type: 'select', options: this.updateTypesStore.items, optionLabel: 'title', optionValue: 'id' },
+				{ key: 'updateBy', label: t('charity', 'Updated By'), type: 'text' },
+			]
+		},
 		actions() {
 			const base = [
 				{ name: 'edit', label: t('charity', 'Edit'), icon: 'icon-edit' },
@@ -93,6 +124,14 @@ export default {
 		}
 	},
 	methods: {
+		applyFilters(filters) {
+			this.filters = filters
+			this.updatesStore.fetchAll(filters)
+		},
+		clearFilters() {
+			this.filters = {}
+			this.updatesStore.fetchAll()
+		},
 		formatId(id) {
 			return String(id).padStart(10, '0')
 		},

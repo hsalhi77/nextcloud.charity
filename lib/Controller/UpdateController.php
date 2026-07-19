@@ -33,7 +33,7 @@ class UpdateController extends Controller {
      */
     public function getall() {
         return $this->helper->handleErrorResponse(function () {
-            return $this->service->findAll();
+            return $this->service->findAll($this->request->getParams());
         });
     }
 

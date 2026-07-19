@@ -9,8 +9,17 @@
 					</template>
 					{{ t('charity', 'Add Payment') }}
 				</NcButton>
+				<NcButton type="secondary" @click="filtersVisible = !filtersVisible">
+					{{ t('charity', 'Filters') }}
+				</NcButton>
 			</div>
 		</header>
+
+		<EntityFilter
+			v-if="filtersVisible"
+			:fields="filterFields"
+			@filter="applyFilters"
+			@clear="clearFilters" />
 
 		<div v-if="paymentsStore.loading" class="cm-view__loading">
 			<NcLoadingIcon :size="32" />
@@ -23,6 +32,25 @@
 			:empty-text="t('charity', 'No payments found')"
 			@row-click="openDetailPanel"
 			@action="onAction" />
+
+		<div v-if="!paymentsStore.loading" class="cm-payments-footer">
+			<div class="cm-payments-footer__row">
+				<span class="cm-payments-footer__label">{{ t('charity', 'Receipt') }}</span>
+				<span class="cm-payments-footer__value">{{ formatAmount(totals.receipt) }}</span>
+			</div>
+			<div class="cm-payments-footer__row">
+				<span class="cm-payments-footer__label">{{ t('charity', 'Payment') }}</span>
+				<span class="cm-payments-footer__value">{{ formatAmount(totals.payment) }}</span>
+			</div>
+			<div class="cm-payments-footer__row">
+				<span class="cm-payments-footer__label">{{ t('charity', 'Expense Payment') }}</span>
+				<span class="cm-payments-footer__value">{{ formatAmount(totals.expensePayment) }}</span>
+			</div>
+			<div class="cm-payments-footer__row cm-payments-footer__row--balance">
+				<span class="cm-payments-footer__label">{{ t('charity', 'Balance') }}</span>
+				<span class="cm-payments-footer__value">{{ formatAmount(totals.balance) }}</span>
+			</div>
+		</div>
 	</div>
 </template>
 
@@ -30,6 +58,7 @@
 import { NcButton, NcLoadingIcon } from '@nextcloud/vue'
 import PlusIcon from 'vue-material-design-icons/Plus.vue'
 import EntityTable from '../components/EntityTable.vue'
+import EntityFilter from '../components/EntityFilter.vue'
 import { usePaymentsStore, useCasesStore } from '../stores/entities.js'
 import { useUiStore } from '../stores/ui.js'
 import { useUserStore } from '../stores/user.js'
@@ -42,6 +71,7 @@ export default {
 		NcLoadingIcon,
 		PlusIcon,
 		EntityTable,
+		EntityFilter,
 	},
 	setup() {
 		const paymentsStore = usePaymentsStore()
@@ -56,7 +86,45 @@ export default {
 			t,
 		}
 	},
+	data() {
+		return {
+			filtersVisible: false,
+			filters: {},
+		}
+	},
 	computed: {
+		totals() {
+			const items = this.paymentsStore.items || []
+			const receipt = items
+				.filter(p => p.paymentType === 'Receipt')
+				.reduce((sum, p) => sum + (parseFloat(p.paymentAmount) || 0), 0)
+			const payment = items
+				.filter(p => p.paymentType === 'Payment')
+				.reduce((sum, p) => sum + (parseFloat(p.paymentAmount) || 0), 0)
+			const expensePayment = items
+				.filter(p => p.paymentType === 'Expense Payment')
+				.reduce((sum, p) => sum + (parseFloat(p.paymentAmount) || 0), 0)
+			return {
+				receipt,
+				payment,
+				expensePayment,
+				balance: receipt - payment - expensePayment,
+			}
+		},
+		caseOptions() {
+			return this.casesStore.items.map(c => ({
+				id: c.id,
+				title: `${String(c.id).padStart(10, '0')} - ${c.firstName || ''} ${c.lastName || ''}`.trim(),
+			}))
+		},
+		filterFields() {
+			return [
+				{ key: 'caseId', label: t('charity', 'Case'), type: 'select', options: this.caseOptions, optionLabel: 'title', optionValue: 'id' },
+				{ key: 'paymentDate', label: t('charity', 'Payment Date'), type: 'text', inputType: 'date' },
+				{ key: 'paymentType', label: t('charity', 'Payment Type'), type: 'text' },
+				{ key: 'paymentAmount', label: t('charity', 'Amount'), type: 'text', inputType: 'number' },
+			]
+		},
 		actions() {
 			const base = [
 				{ name: 'edit', label: t('charity', 'Edit'), icon: 'icon-edit' },
@@ -74,7 +142,7 @@ export default {
 				{ key: 'paymentType', label: t('charity', 'Type'), width: '15%' },
 				{ key: 'paymentAmount', label: t('charity', 'Amount'), width: '12%' },
 				{ key: 'paymentReference', label: t('charity', 'Payment Reference'), width: '15%' },
-				{ key: 'paidBy', label: t('charity', 'Paid By'), width: '13%' },
+				{ key: 'paidBy', label: t('charity', 'Cashbook'), width: '13%' },
 			]
 		},
 	},
@@ -91,6 +159,17 @@ export default {
 		}
 	},
 	methods: {
+		formatAmount(amount) {
+			return (parseFloat(amount) || 0).toFixed(2)
+		},
+		applyFilters(filters) {
+			this.filters = filters
+			this.paymentsStore.fetchAll(filters)
+		},
+		clearFilters() {
+			this.filters = {}
+			this.paymentsStore.fetchAll()
+		},
 		formatDate(date) {
 			if (!date) return ''
 			return new Date(date).toLocaleDateString()
@@ -159,5 +238,36 @@ export default {
     display: flex;
     justify-content: center;
     padding: 48px;
+}
+
+.cm-payments-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 24px;
+    padding: 16px 0;
+    border-top: 1px solid var(--color-border);
+    margin-top: 8px;
+}
+
+.cm-payments-footer__row {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    min-width: 100px;
+}
+
+.cm-payments-footer__label {
+    font-size: 12px;
+    color: var(--color-text-maxcontrast);
+    font-weight: 600;
+}
+
+.cm-payments-footer__value {
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.cm-payments-footer__row--balance .cm-payments-footer__value {
+    color: var(--color-primary-element);
 }
 </style>

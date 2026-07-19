@@ -30,6 +30,8 @@ return [
         ['name' => 'acl#byObject', 'url' => '/acl/byObject/{object_type}/{object_id}', 'verb' => 'POST'],
         ['name' => 'acl#addAcl', 'url' => '/acl', 'verb' => 'POST'],
         ['name' => 'acl#deleteAcl', 'url' => '/acl/{aclId}', 'verb' => 'DELETE'],
+
+        ['name' => 'dashboard#stats', 'url' => '/dashboard/stats', 'verb' => 'GET'],
     ],
     'resources' => [
         'case' => ['url' => '/cases'],

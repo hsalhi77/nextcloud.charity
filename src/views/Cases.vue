@@ -9,8 +9,17 @@
 					</template>
 					{{ t('charity', 'Add Case') }}
 				</NcButton>
+				<NcButton type="secondary" @click="filtersVisible = !filtersVisible">
+					{{ t('charity', 'Filters') }}
+				</NcButton>
 			</div>
 		</header>
+
+		<EntityFilter
+			v-if="filtersVisible"
+			:fields="filterFields"
+			@filter="applyFilters"
+			@clear="clearFilters" />
 
 		<div v-if="casesStore.loading" class="cm-view__loading">
 			<NcLoadingIcon :size="32" />
@@ -30,7 +39,8 @@
 import { NcButton, NcLoadingIcon } from '@nextcloud/vue'
 import PlusIcon from 'vue-material-design-icons/Plus.vue'
 import EntityTable from '../components/EntityTable.vue'
-import { useCasesStore, useCaseTypesStore } from '../stores/entities.js'
+import EntityFilter from '../components/EntityFilter.vue'
+import { useCasesStore, useCaseTypesStore, useCitiesStore } from '../stores/entities.js'
 import { useUiStore } from '../stores/ui.js'
 import { useUserStore } from '../stores/user.js'
 import { translate as t } from '@nextcloud/l10n'
@@ -42,21 +52,39 @@ export default {
 		NcLoadingIcon,
 		PlusIcon,
 		EntityTable,
+		EntityFilter,
 	},
 	setup() {
 		const casesStore = useCasesStore()
 		const caseTypesStore = useCaseTypesStore()
+		const citiesStore = useCitiesStore()
 		const ui = useUiStore()
 		const userStore = useUserStore()
 		return {
 			casesStore,
 			caseTypesStore,
+			citiesStore,
 			ui,
 			userStore,
 			t,
 		}
 	},
-		computed: {
+	data() {
+		return {
+			filtersVisible: false,
+			filters: {},
+		}
+	},
+	computed: {
+		filterFields() {
+			return [
+				{ key: 'name', label: t('charity', 'Name'), type: 'text' },
+				{ key: 'cityId', label: t('charity', 'City'), type: 'select', options: this.citiesStore.items, optionLabel: 'title', optionValue: 'id' },
+				{ key: 'caseTypeId', label: t('charity', 'Case Type'), type: 'select', options: this.caseTypesStore.items, optionLabel: 'title', optionValue: 'id' },
+				{ key: 'owner', label: t('charity', 'Owner'), type: 'text' },
+				{ key: 'referredBy', label: t('charity', 'Referred By'), type: 'text' },
+			]
+		},
 		actions() {
 			const base = [
 				{ name: 'addPayment', label: t('charity', '[+] Payment') },
@@ -84,9 +112,18 @@ export default {
 		await Promise.all([
 			this.casesStore.fetchAll(),
 			this.caseTypesStore.fetchAll(),
+			this.citiesStore.fetchAll(),
 		])
 	},
 	methods: {
+		applyFilters(filters) {
+			this.filters = filters
+			this.casesStore.fetchAll(filters)
+		},
+		clearFilters() {
+			this.filters = {}
+			this.casesStore.fetchAll()
+		},
 		formatId(id) {
 			if (id == null) return ''
 			return String(id).padStart(10, '0')

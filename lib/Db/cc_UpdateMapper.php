@@ -13,9 +13,28 @@ class cc_UpdateMapper extends CharityMapper {
         return $this->findEntityString($sql, [$id]);
     }
 
-    public function findAll() {
-        $sql = 'SELECT * FROM `*PREFIX*cc_update`';
-        return $this->findEntitiesString($sql, []);
+    public function findAll($param = []) {
+        $sql = 'SELECT * FROM `*PREFIX*cc_update` WHERE 1=1';
+        $bindings = [];
+        $columnMap = [
+            'caseId' => 'case_id',
+            'updateDate' => 'update_date',
+            'updateTypeId' => 'update_type_id',
+            'updateBy' => 'update_by',
+        ];
+        foreach ($param as $key => $val) {
+            if ($key === '' || $key[0] === '_' || $val === '') {
+                continue;
+            }
+            $cleanKey = preg_replace('/[^a-zA-Z0-9_]/', '', $key);
+            if ($cleanKey === '') {
+                continue;
+            }
+            $column = $columnMap[$cleanKey] ?? $cleanKey;
+            $sql .= ' AND `' . $column . '` = ?';
+            $bindings[] = $val;
+        }
+        return $this->findEntitiesString($sql, $bindings);
     }
 
     public function findByCase($caseId) {

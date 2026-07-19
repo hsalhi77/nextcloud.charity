@@ -4,7 +4,8 @@ import VueRouter from 'vue-router'
 Vue.use(VueRouter)
 
 const routes = [
-	{ path: '/', name: 'home', redirect: '/cases' },
+	{ path: '/', name: 'home', redirect: '/dashboard' },
+	{ path: '/dashboard', name: 'dashboard', component: () => import('../views/Dashboard.vue') },
 	{ path: '/cases', name: 'cases', component: () => import('../views/Cases.vue') },
 	{ path: '/payments', name: 'payments', component: () => import('../views/Payments.vue') },
 	{ path: '/updates', name: 'updates', component: () => import('../views/Updates.vue') },

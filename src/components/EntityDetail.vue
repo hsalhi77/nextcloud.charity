@@ -38,7 +38,7 @@
 								<th>{{ t('charity', 'Date') }}</th>
 								<th>{{ t('charity', 'Type') }}</th>
 								<th>{{ t('charity', 'Amount') }}</th>
-								<th>{{ t('charity', 'Paid By') }}</th>
+								<th>{{ t('charity', 'Cashbook') }}</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -239,7 +239,7 @@ export default {
 					{ key: 'paymentType', label: t('charity', 'Payment Type') },
 				{ key: 'paymentAmount', label: t('charity', 'Amount') },
 				{ key: 'paymentReference', label: t('charity', 'Payment Reference') },
-					{ key: 'paidBy', label: t('charity', 'Paid By') },
+					{ key: 'paidBy', label: t('charity', 'Cashbook') },
 				]
 			case 'cc_Update':
 				return [
@@ -300,6 +300,7 @@ export default {
 				const promises = []
 				if (this.entityType === 'cc_Case') {
 					promises.push(this.stores.cc_CaseType?.fetchAll())
+					promises.push(this.stores.cc_UpdateType?.fetchAll())
 					promises.push(this.stores.cc_City?.fetchAll())
 					promises.push(this.loadPayments())
 					promises.push(this.loadUpdates())

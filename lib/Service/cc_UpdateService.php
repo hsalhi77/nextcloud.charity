@@ -19,8 +19,8 @@ class cc_UpdateService {
 		$this->userId = $userId;
 	}
 
-	public function findAll() {
-		return $this->mapper->findAll();
+	public function findAll($param = []) {
+		return $this->mapper->findAll($param);
 	}
 
 	public function find($id) {

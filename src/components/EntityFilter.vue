@@ -8,6 +8,7 @@
 					:id="`filter-${field.key}`"
 					v-model="values[field.key]"
 					:label="field.label"
+					:type="field.inputType || 'text'"
 					:show-trailing-button="false" />
 				<NcSelect
 					v-else

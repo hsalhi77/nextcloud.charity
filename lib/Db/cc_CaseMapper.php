@@ -33,6 +33,20 @@ class cc_CaseMapper extends CharityMapper {
             $sql = 'SELECT *, 0 as shared FROM `*PREFIX*cc_case` WHERE owner = ? AND isactive = 1';
             $bindings = [$userId];
         }
+        $name = $param['name'] ?? null;
+        if ($name !== null && $name !== '') {
+            $sql .= ' AND (`first_name` LIKE ? OR `last_name` LIKE ?)';
+            $like = '%' . $name . '%';
+            $bindings[] = $like;
+            $bindings[] = $like;
+            unset($param['name']);
+        }
+        $columnMap = [
+            'cityId' => 'city_id',
+            'caseTypeId' => 'case_type_id',
+            'referredBy' => 'referred_by',
+            'owner' => 'owner',
+        ];
         foreach ($param as $key => $val) {
             if ($key === '' || $key[0] === '_' || $val === '') {
                 continue;
@@ -41,7 +55,8 @@ class cc_CaseMapper extends CharityMapper {
             if ($cleanKey === '') {
                 continue;
             }
-            $sql .= ' AND `' . $cleanKey . '` = ?';
+            $column = $columnMap[$cleanKey] ?? $cleanKey;
+            $sql .= ' AND `' . $column . '` = ?';
             $bindings[] = $val;
         }
         return $this->findEntitiesString($sql, $bindings);

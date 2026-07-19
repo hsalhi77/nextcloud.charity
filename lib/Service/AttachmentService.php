@@ -362,10 +362,7 @@ class AttachmentService {
 	 * Build a folder-safe name for a case attachment directory.
 	 */
 	private function getCaseFolderName(cc_Case $case): string {
-		$fn = $case->getFirstName() ?? '';
-		$ln = $case->getLastName() ?? '';
-		$safeName = $this->sanitizeFolderName($fn . ' ' . $ln);
-		return sprintf('%010d', $case->getId()) . ' - ' . $safeName;
+		return sprintf('%010d', $case->getId());
 	}
 
 	/**
@@ -389,7 +386,7 @@ class AttachmentService {
 			}
 		}
 		$oldNames = [
-			sprintf('%010d', $case->getId()),
+			sprintf('%010d', $case->getId()) . ' - ' . $this->sanitizeFolderName($case->getFirstName() . ' ' . $case->getLastName()),
 			sprintf('%06d', $case->getId()),
 			'Case-' . $case->getId() . '-' . $case->getFirstName() . '-' . $case->getLastName(),
 			'Case-' . $case->getId(),

@@ -89,6 +89,13 @@ export default {
 		submitLabel() {
 			return this.mode === 'add' ? t('charity', 'Create') : t('charity', 'Save Changes')
 		},
+		paymentTypeOptions() {
+			const base = [{ label: 'Payment' }, { label: 'Receipt' }]
+			if (!this.form.caseId) {
+				base.push({ label: 'Expense Payment' })
+			}
+			return base
+		},
 		fields() {
 			switch (this.entityType) {
 			case 'cc_Case':
@@ -111,10 +118,10 @@ export default {
 				return [
 					{ key: 'caseId', label: t('charity', 'Case'), type: 'select', options: [{ _displayLabel: t('charity', 'None') }, ...(this.stores.cc_Case?.items || []).map(c => ({ ...c, _displayLabel: String(c.id).padStart(10, '0') }))], optionLabel: '_displayLabel', optionValue: 'id' },
 					{ key: 'paymentDate', label: t('charity', 'Payment Date'), type: 'date', required: true },
-					{ key: 'paymentType', label: t('charity', 'Payment Type'), type: 'select', options: [{ label: 'Payment' }, { label: 'Receipt' }], optionLabel: 'label', optionValue: 'label' },
+					{ key: 'paymentType', label: t('charity', 'Payment Type'), type: 'select', options: this.paymentTypeOptions, optionLabel: 'label', optionValue: 'label' },
 				{ key: 'paymentAmount', label: t('charity', 'Amount'), type: 'number', required: true },
 				{ key: 'paymentReference', label: t('charity', 'Payment Reference'), type: 'text' },
-				{ key: 'paidBy', label: t('charity', 'Paid By'), type: 'select', options: this.users, optionLabel: 'displayName', optionValue: 'uid' },
+				{ key: 'paidBy', label: t('charity', 'Cashbook'), type: 'select', options: this.users, optionLabel: 'displayName', optionValue: 'uid' },
 				]
 			case 'cc_Update':
 				return [
@@ -152,6 +159,11 @@ export default {
 					}
 				})
 			},
+		},
+		'form.caseId'(newVal, oldVal) {
+			if (newVal && !oldVal && this.form.paymentType === 'Expense Payment') {
+				this.form.paymentType = null
+			}
 		},
 	},
 	methods: {
