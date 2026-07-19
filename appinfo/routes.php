@@ -1,8 +1,7 @@
 <?php
 return [
     'routes' => [
-        ['name' => 'page#index', 'url' => '/', 'verb' => 'GET', 'postfix' => 'root'],
-        ['name' => 'page#index', 'url' => '/home', 'verb' => 'GET', 'postfix' => 'home'],
+        ['name' => 'page#index', 'url' => '/', 'verb' => 'GET'],
 
         ['name' => 'config#get', 'url' => '/api/v1.0/config', 'verb' => 'GET'],
         ['name' => 'config#groupFolders', 'url' => '/api/v1.0/config/groupFolders', 'verb' => 'GET'],
@@ -32,6 +31,8 @@ return [
         ['name' => 'acl#deleteAcl', 'url' => '/acl/{aclId}', 'verb' => 'DELETE'],
 
         ['name' => 'dashboard#stats', 'url' => '/dashboard/stats', 'verb' => 'GET'],
+
+        ['name' => 'page#index', 'url' => '/{path}', 'verb' => 'GET', 'postfix' => 'catchall', 'requirements' => ['path' => '.+']],
     ],
     'resources' => [
         'case' => ['url' => '/cases'],

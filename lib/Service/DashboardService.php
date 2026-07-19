@@ -58,7 +58,7 @@ class DashboardService {
 
 	private function getPaymentTotal(string $type): float {
 		$qb = $this->db->getQueryBuilder();
-		$qb->select($qb->func()->sum('payment_amount', 'total'))
+		$qb->selectAlias($qb->func()->sum('payment_amount'), 'total')
 			->from('cc_payment')
 			->where($qb->expr()->eq('payment_type', $qb->createNamedParameter($type)));
 		$result = $qb->executeQuery();

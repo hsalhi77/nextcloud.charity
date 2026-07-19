@@ -5,7 +5,7 @@
     <name>Charity</name>
     <summary>Charity Case Management</summary>
 
-    <description><![CDATA[Charity Case Management for Nextcloud]]></description>
+    <description><![CDATA[Charity Case Management for Nextcloud. Requires the Group Folders app to be installed and enabled.]]></description>
     <version>1.0.0</version>
     <licence>agpl</licence>
     <author mail="charity@example.com" homepage="https://example.com">Charity Case Management</author>
@@ -22,8 +22,8 @@
     <navigations>
         <navigation>
             <name>Charity</name>
-            <route>charity.page.index.home</route>
-            <icon>charity.svg</icon>
+            <route>charity.page.index</route>
+            <icon>charity.png</icon>
         </navigation>
     </navigations>
 </info>
