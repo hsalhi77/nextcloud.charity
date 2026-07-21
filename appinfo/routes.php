@@ -32,6 +32,15 @@ return [
 
         ['name' => 'dashboard#stats', 'url' => '/dashboard/stats', 'verb' => 'GET'],
 
+        // POST routes for resource show — needed because the catchall GET /{path}
+        // below intercepts GET /{resource}/{id} before the resource routes match
+        ['name' => 'case#show', 'url' => '/cases/{id}', 'verb' => 'POST'],
+        ['name' => 'payment#show', 'url' => '/payments/{id}', 'verb' => 'POST'],
+        ['name' => 'update#show', 'url' => '/updates/{id}', 'verb' => 'POST'],
+        ['name' => 'city#show', 'url' => '/city/{id}', 'verb' => 'POST'],
+        ['name' => 'casetype#show', 'url' => '/casetype/{id}', 'verb' => 'POST'],
+        ['name' => 'updatetype#show', 'url' => '/updatetype/{id}', 'verb' => 'POST'],
+
         ['name' => 'page#index', 'url' => '/{path}', 'verb' => 'GET', 'postfix' => 'catchall', 'requirements' => ['path' => '.+']],
     ],
     'resources' => [

@@ -1,22 +1,31 @@
 import axios from '@nextcloud/axios'
 import { generateUrl } from '@nextcloud/router'
 
-export async function get(url) {
-    const response = await axios.get(generateUrl(`/apps/charity${url}`))
-    return response.data
+function unwrap(request) {
+	return request.then(res => {
+		const data = res.data
+		if (data && typeof data === 'object' && 'message' in data) {
+			if (data.message !== 'succes') {
+				throw new Error(data.message || 'Request failed')
+			}
+			return data.data
+		}
+		return data
+	})
 }
 
-export async function post(url, data) {
-    const response = await axios.post(generateUrl(`/apps/charity${url}`), data)
-    return response.data
+export function get(url) {
+	return unwrap(axios.get(generateUrl(`/apps/charity${url}`)))
 }
 
-export async function put(url, data) {
-    const response = await axios.put(generateUrl(`/apps/charity${url}`), data)
-    return response.data
+export function post(url, data) {
+	return unwrap(axios.post(generateUrl(`/apps/charity${url}`), data))
 }
 
-export async function del(url) {
-    const response = await axios.delete(generateUrl(`/apps/charity${url}`))
-    return response.data
+export function put(url, data) {
+	return unwrap(axios.put(generateUrl(`/apps/charity${url}`), data))
+}
+
+export function del(url) {
+	return unwrap(axios.delete(generateUrl(`/apps/charity${url}`)))
 }

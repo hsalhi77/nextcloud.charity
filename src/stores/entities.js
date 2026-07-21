@@ -1,35 +1,12 @@
 import { defineStore } from 'pinia'
-import { get, post, put, del } from '../services/api.js'
+import { post, put, del } from '../services/api.js'
 
-/**
- * Normalise a date field from the backend envelope to YYYY-MM-DD
- * @param {object} item - The entity item
- * @param {string} field - The date field name
- */
 function normaliseDate(item, field) {
 	if (item && item[field] && typeof item[field] === 'object' && item[field].date) {
 		item[field] = item[field].date.slice(0, 10)
 	}
 }
 
-/**
- * Unwrap the backend envelope when it exists
- * @param {any} res - The response or raw data
- * @return {any} The unwrapped data
- */
-function unwrap(res) {
-	if (res && typeof res === 'object' && 'data' in res) {
-		return res.data
-	}
-	return res
-}
-
-/**
- * Generic entity store factory
- * @param {string} name - The Pinia store name
- * @param {string} endpoint - The API endpoint prefix
- * @param {string[]} dateFields - Fields to normalise as dates
- */
 function createEntityStore(name, endpoint, dateFields = []) {
 	return defineStore(name, {
 		state: () => ({
@@ -60,8 +37,8 @@ function createEntityStore(name, endpoint, dateFields = []) {
 				this.error = null
 				this._pendingFetch = (async () => {
 					try {
-						const res = await post(`${endpoint}/getall`, params)
-						this.items = Array.isArray(res.data) ? this._normalise(res.data) : []
+						const data = await post(`${endpoint}/getall`, params)
+						this.items = this._normalise(data)
 					} catch (err) {
 						this.error = err.message
 						throw err
@@ -74,7 +51,7 @@ function createEntityStore(name, endpoint, dateFields = []) {
 			},
 
 			async fetchOne(id) {
-				const data = unwrap(await get(`${endpoint}/${id}`))
+				const data = await post(`${endpoint}/${id}`)
 				const item = this._normalise(data)[0]
 				if (item) {
 					const idx = this.items.findIndex(i => i.id === id)
@@ -88,7 +65,7 @@ function createEntityStore(name, endpoint, dateFields = []) {
 			},
 
 			async create(payload) {
-				const data = unwrap(await post(endpoint, payload))
+				const data = await post(endpoint, payload)
 				const normalised = this._normalise(data)[0]
 				if (normalised) this.items.push(normalised)
 				return normalised
@@ -136,8 +113,8 @@ export const useAttachmentsStore = defineStore('attachments', {
 			this.loading = true
 			this.error = null
 			try {
-				const res = await post(`/attachment/${objectId}/${objectType}`, {})
-				this.items = Array.isArray(res.data) ? res.data : []
+				const data = await post(`/attachment/${objectId}/${objectType}`, {})
+				this.items = data
 			} catch (err) {
 				this.error = err.message
 				throw err
@@ -149,7 +126,7 @@ export const useAttachmentsStore = defineStore('attachments', {
 			this.uploading = true
 			this.error = null
 			try {
-				const res = await post('/attachment', {
+				const data = await post('/attachment', {
 					objectType,
 					objectId,
 					file: {
@@ -160,8 +137,8 @@ export const useAttachmentsStore = defineStore('attachments', {
 						description: file.description || '',
 					},
 				})
-				if (res.data) this.items.push(res.data)
-				return res.data
+				if (data) this.items.push(data)
+				return data
 			} catch (err) {
 				this.error = err.message
 				throw err

@@ -12,6 +12,9 @@ const pinia = createPinia()
 Vue.prototype.t = translate
 Vue.prototype.n = translatePlural
 
+// Dynamic public path so chunked imports load correctly on subdirectory URLs
+__webpack_public_path__ = generateFilePath('charity', '', 'js/')
+
 // CSP hack for Nextcloud webpack dev server
 __webpack_nonce__ = btoa(getRootUrl() + generateFilePath('charity', '', 'js/'))
 

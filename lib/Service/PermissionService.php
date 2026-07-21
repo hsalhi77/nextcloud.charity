@@ -57,6 +57,9 @@ class PermissionService {
 	/** @var IManager */
 	private $shareManager;
 
+	/** @var TeamService */
+	private $teamService;
+
 	/** @var string */
 	private $userId;
 
@@ -73,6 +76,7 @@ class PermissionService {
 		IGroupManager $groupManager,
 		IManager $shareManager,
 		IConfig $config,
+		TeamService $teamService,
 		$userId
 	) {
 		$this->aclMapper = $aclMapper;
@@ -82,6 +86,7 @@ class PermissionService {
 		$this->groupManager = $groupManager;
 		$this->shareManager = $shareManager;
 		$this->config = $config;
+		$this->teamService = $teamService;
 		$this->userId = $userId;
 
 		$this->circlesEnabled = \OC::$server->getAppManager()->isEnabledForUser('circles') &&
@@ -136,6 +141,10 @@ class PermissionService {
 
 		if ($permission === Acl::PERMISSION_SHARE && $this->shareManager->sharingDisabledForUser($this->userId)) {
 			return false;
+		}
+
+		if ($this->teamService->isAdmin()) {
+			return true;
 		}
 
 		if ($this->userIsOwner($object_type, $object_id, $userId)) {

@@ -22,8 +22,8 @@ export const useUserStore = defineStore('user', {
 			this.loading = true
 			this.error = null
 			try {
-				const res = await post('/team/userGroups', {})
-				this.groups = Array.isArray(res.data) ? res.data : []
+				const groups = await post('/team/userGroups', {})
+				this.groups = Array.isArray(groups) ? groups : []
 			} catch (err) {
 				this.error = err.message
 				throw err

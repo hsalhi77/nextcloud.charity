@@ -70,18 +70,6 @@ import { get, post } from '../services/api.js'
 import NcLoadingIcon from '@nextcloud/vue/dist/Components/NcLoadingIcon.js'
 import NcCheckboxRadioSwitch from '@nextcloud/vue/dist/Components/NcCheckboxRadioSwitch.js'
 
-/**
- * Unwrap the backend envelope when it exists
- * @param {any} res - The response or raw data
- * @return {any} The unwrapped data
- */
-function unwrap(res) {
-	if (res && typeof res === 'object' && 'data' in res) {
-		return res.data
-	}
-	return res
-}
-
 export default {
 	name: 'Settings',
 	components: { NcLoadingIcon, NcCheckboxRadioSwitch },
@@ -112,7 +100,7 @@ export default {
 	methods: {
 		async loadConfig() {
 			try {
-				const config = unwrap(await get('/api/v1.0/config'))
+				const config = await get('/api/v1.0/config')
 				this.createTeamForCase = config.createTeamForCase !== false
 				this.groupFolderId = config.groupFolderId || '1'
 			} catch (err) {
@@ -121,7 +109,7 @@ export default {
 		},
 		async loadGroupFolders() {
 			try {
-				const folders = unwrap(await get('/api/v1.0/config/groupFolders'))
+				const folders = await get('/api/v1.0/config/groupFolders')
 				this.groupFolders = Array.isArray(folders) ? folders : []
 			} catch (err) {
 				console.error(err)
@@ -139,7 +127,7 @@ export default {
 		async loadUsers() {
 			this.loading = true
 			try {
-				const users = unwrap(await post('/team/searchUsers', { params: { search: '' } }))
+				const users = await post('/team/searchUsers', { params: { search: '' } })
 				this.users = (users || []).map(u => ({
 					uid: u.uid,
 					displayName: u.displayName,
@@ -153,7 +141,7 @@ export default {
 		},
 		async toggleEnabled(uid) {
 			try {
-				const res = unwrap(await post('/team/toggleUserEnabled', { params: { uid } }))
+				const res = await post('/team/toggleUserEnabled', { params: { uid } })
 				const user = this.users.find(u => u.uid === uid)
 				if (user) user.enabled = res.enabled
 			} catch (err) {

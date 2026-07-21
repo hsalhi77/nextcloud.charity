@@ -77,10 +77,12 @@ export default {
 	},
 	computed: {
 		caseOptions() {
-			return this.casesStore.items.map(c => ({
-				id: c.id,
-				title: `${String(c.id).padStart(10, '0')} - ${c.firstName || ''} ${c.lastName || ''}`.trim(),
-			}))
+			return this.casesStore.items
+				.filter(c => c.id != null)
+				.map(c => ({
+					id: c.id,
+					title: `${String(c.id).padStart(10, '0')} - ${c.firstName || ''} ${c.lastName || ''}`.trim(),
+				}))
 		},
 		filterFields() {
 			return [
@@ -133,6 +135,7 @@ export default {
 			this.updatesStore.fetchAll()
 		},
 		formatId(id) {
+			if (id == null) return ''
 			return String(id).padStart(10, '0')
 		},
 		formatDate(date) {

@@ -184,7 +184,7 @@ export default {
 			if (this.entityType === 'cc_Case' || this.entityType === 'cc_Payment' || this.entityType === 'cc_Update') {
 				try {
 					const result = await post('/team/usersByGroup', { params: { group: 'Charity' } })
-					this.users = result.data || []
+					this.users = result || []
 				} catch (e) {
 					console.error('Failed to load users', e)
 					this.users = []
