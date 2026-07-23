@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { post, postForm, put, del } from '../services/api.js'
+import { post, postForm } from '../services/api.js'
 
 function normaliseDate(item, field) {
 	if (item && item[field] && typeof item[field] === 'object' && item[field].date) {
@@ -51,7 +51,7 @@ function createEntityStore(name, endpoint, dateFields = []) {
 			},
 
 			async fetchOne(id) {
-				const data = await post(`${endpoint}/${id}`)
+				const data = await post(`${endpoint}/${id}/show`)
 				const item = this._normalise(data)[0]
 				if (item) {
 					const idx = this.items.findIndex(i => i.id === id)
@@ -72,12 +72,12 @@ function createEntityStore(name, endpoint, dateFields = []) {
 			},
 
 			async update(id, payload) {
-				await put(`${endpoint}/${id}`, payload)
+				await post(`${endpoint}/${id}/update`, payload)
 				return await this.fetchOne(id)
 			},
 
 			async remove(id) {
-				await del(`${endpoint}/${id}`)
+				await post(`${endpoint}/${id}/delete`)
 				const index = this.items.findIndex(item => item.id === id)
 				if (index !== -1) this.items.splice(index, 1)
 			},

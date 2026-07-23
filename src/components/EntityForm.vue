@@ -154,11 +154,13 @@ export default {
 			immediate: true,
 			handler(entity) {
 				this.form = entity ? { ...entity } : {}
-				this.fields.forEach(field => {
-					if (this.form[field.key] === undefined) {
-						this.$set(this.form, field.key, null)
-					}
-				})
+			this.fields.forEach(field => {
+				if (this.form[field.key] === undefined) {
+					// Textareas should default to an empty string so v-model/bindings
+					// always treat them as a controlled string input.
+					this.$set(this.form, field.key, field.type === 'textarea' ? '' : null)
+				}
+			})
 			},
 		},
 		'form.caseId'(newVal, oldVal) {
