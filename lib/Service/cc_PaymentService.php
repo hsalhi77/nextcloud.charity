@@ -44,6 +44,7 @@ class cc_PaymentService {
 		$item->setPaymentType($param['paymentType'] ?? '');
 		$item->setPaymentAmount($param['paymentAmount'] ?? 0);
 		$item->setPaymentReference($param['paymentReference'] ?? '');
+		$item->setDescription($param['description'] ?? '');
 		return $this->mapper->insert($item);
 	}
 
@@ -56,6 +57,7 @@ class cc_PaymentService {
 		if (isset($param['paymentType'])) $item->setPaymentType($param['paymentType']);
 		if (isset($param['paymentAmount'])) $item->setPaymentAmount($param['paymentAmount']);
 		if (isset($param['paymentReference'])) $item->setPaymentReference($param['paymentReference']);
+		if (isset($param['description'])) $item->setDescription($param['description']);
 		return $this->mapper->update($item);
 	}
 

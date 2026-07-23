@@ -168,16 +168,19 @@ class TeamService {
 	 * Get users in a specific group.
 	 */
 	public function getUsersByGroup(string $groupName): array {
-		$group = $this->groupManager->get($groupName);
-		if (!$group) {
-			// Fallback: look up by display name (needed when group ID differs from group name)
-			$lower = strtolower($groupName);
-			foreach ($this->groupManager->search($groupName) as $g) {
-				if (strtolower($g->getDisplayName()) === $lower) {
-					$group = $g;
-					break;
-				}
+		$group = null;
+		$lower = strtolower($groupName);
+		// First match by display name, because the requested value is a group name
+		// and the group ID can differ between servers.
+		foreach ($this->groupManager->search($groupName) as $g) {
+			if (strtolower($g->getDisplayName()) === $lower) {
+				$group = $g;
+				break;
 			}
+		}
+		// Fallback to ID match if no display name matched.
+		if (!$group) {
+			$group = $this->groupManager->get($groupName);
 		}
 		if (!$group) return [];
 		$result = [];

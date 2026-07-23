@@ -6,7 +6,7 @@
     <summary>Charity Case Management</summary>
 
     <description><![CDATA[Charity Case Management for Nextcloud. Requires the Group Folders app to be installed and enabled.]]></description>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
     <licence>agpl</licence>
     <author mail="charity@example.com" homepage="https://example.com">Charity Case Management</author>
     <namespace>Charity</namespace>

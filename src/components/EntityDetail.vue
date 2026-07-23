@@ -240,6 +240,7 @@ export default {
 				{ key: 'paymentAmount', label: t('charity', 'Amount') },
 				{ key: 'paymentReference', label: t('charity', 'Payment Reference') },
 					{ key: 'paidBy', label: t('charity', 'Cashbook') },
+					{ key: 'description', label: t('charity', 'Description') },
 				]
 			case 'cc_Update':
 				return [

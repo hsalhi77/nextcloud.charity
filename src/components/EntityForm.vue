@@ -122,6 +122,7 @@ export default {
 				{ key: 'paymentAmount', label: t('charity', 'Amount'), type: 'number', required: true },
 				{ key: 'paymentReference', label: t('charity', 'Payment Reference'), type: 'text' },
 				{ key: 'paidBy', label: t('charity', 'Cashbook'), type: 'select', options: this.users, optionLabel: 'displayName', optionValue: 'uid' },
+				{ key: 'description', label: t('charity', 'Description'), type: 'textarea' },
 				]
 			case 'cc_Update':
 				return [
@@ -183,7 +184,7 @@ export default {
 			}))
 			if (this.entityType === 'cc_Case' || this.entityType === 'cc_Payment' || this.entityType === 'cc_Update') {
 				try {
-					const result = await post('/team/usersByGroup', { params: { group: 'Charit Field' } })
+					const result = await post('/team/usersByGroup', { params: { group: 'Charity Field' } })
 					this.users = result || []
 				} catch (e) {
 					console.error('Failed to load users', e)
