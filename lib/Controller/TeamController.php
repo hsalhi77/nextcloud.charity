@@ -75,7 +75,7 @@ class TeamController extends Controller {
     public function usersByGroup() {
         return $this->helper->handleErrorResponse(function () {
             $params = $this->request->getParams()['params'] ?? [];
-            $groupName = $params['group'] ?? 'Charity';
+            $groupName = $params['group'] ?? 'Charit Field';
             return $this->service->getUsersByGroupFiltered($groupName);
         });
     }

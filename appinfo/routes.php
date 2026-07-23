@@ -21,9 +21,11 @@ return [
         ['name' => 'team#usersByGroup', 'url' => '/team/usersByGroup', 'verb' => 'POST'],
         ['name' => 'team#userGroups', 'url' => '/team/userGroups', 'verb' => 'POST'],
 
+        ['name' => 'attachment#create', 'url' => '/attachment', 'verb' => 'POST'],
+        ['name' => 'attachment#chunk', 'url' => '/attachment/chunk', 'verb' => 'POST'],
+        ['name' => 'attachment#finalize', 'url' => '/attachment/finalize', 'verb' => 'POST'],
         ['name' => 'attachment#index', 'url' => '/attachment/{object_type}', 'verb' => 'POST'],
         ['name' => 'attachment#show', 'url' => '/attachment/{object_id}/{object_type}', 'verb' => 'POST'],
-        ['name' => 'attachment#create', 'url' => '/attachment', 'verb' => 'POST'],
         ['name' => 'attachment#destroy', 'url' => '/attachment/{id}', 'verb' => 'DELETE'],
 
         ['name' => 'acl#byObject', 'url' => '/acl/byObject/{object_type}/{object_id}', 'verb' => 'POST'],

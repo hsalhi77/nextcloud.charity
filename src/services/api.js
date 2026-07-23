@@ -22,6 +22,10 @@ export function post(url, data) {
 	return unwrap(axios.post(generateUrl(`/apps/charity${url}`), data))
 }
 
+export function postForm(url, formData) {
+	return unwrap(axios.post(generateUrl(`/apps/charity${url}`), formData))
+}
+
 export function put(url, data) {
 	return unwrap(axios.put(generateUrl(`/apps/charity${url}`), data))
 }

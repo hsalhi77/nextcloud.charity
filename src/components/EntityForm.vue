@@ -183,7 +183,7 @@ export default {
 			}))
 			if (this.entityType === 'cc_Case' || this.entityType === 'cc_Payment' || this.entityType === 'cc_Update') {
 				try {
-					const result = await post('/team/usersByGroup', { params: { group: 'Charity' } })
+					const result = await post('/team/usersByGroup', { params: { group: 'Charit Field' } })
 					this.users = result || []
 				} catch (e) {
 					console.error('Failed to load users', e)

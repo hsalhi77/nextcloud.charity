@@ -352,13 +352,7 @@ export default {
 			if (!file) return
 			this.uploadingFile = true
 			try {
-				const data = await this.readFileAsBase64(file)
-				await this.attachmentsStore.upload(this.entityType, this.entityId, {
-					name: file.name,
-					data,
-					size: file.size,
-					tag: this.uploadTag || undefined,
-				})
+				await this.attachmentsStore.upload(this.entityType, this.entityId, file, this.uploadTag)
 			} catch (err) {
 				console.error(err)
 				alert(err.message || t('charity', 'Upload failed'))
@@ -367,17 +361,6 @@ export default {
 				this.uploadTag = ''
 				this.$refs.fileInput.value = ''
 			}
-		},
-		readFileAsBase64(file) {
-			return new Promise((resolve, reject) => {
-				const reader = new FileReader()
-				reader.onload = () => {
-					const result = reader.result
-					resolve(result.split(',', 2)[1] || result)
-				}
-				reader.onerror = () => reject(new Error('Failed to read file'))
-				reader.readAsDataURL(file)
-			})
 		},
 		formatFileSize(size) {
 			if (!size) return ''

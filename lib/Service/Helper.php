@@ -52,6 +52,8 @@ class Helper
             return $this->buildErrorResponse($e, Http::STATUS_INSUFFICIENT_STORAGE);
         } catch (InvalidAttachmentType $e) {
             return $this->buildErrorResponse($e, Http::STATUS_BAD_REQUEST);
+        } catch (\InvalidArgumentException $e) {
+            return $this->buildErrorResponse($e, Http::STATUS_BAD_REQUEST);
         } catch (\BadMethodCallException $e) {
             return $this->buildErrorResponse($e, Http::STATUS_BAD_REQUEST);
         } catch (DoesNotExistException $e) {

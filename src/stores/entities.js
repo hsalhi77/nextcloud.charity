@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { post, put, del } from '../services/api.js'
+import { post, postForm, put, del } from '../services/api.js'
 
 function normaliseDate(item, field) {
 	if (item && item[field] && typeof item[field] === 'object' && item[field].date) {
@@ -122,21 +122,34 @@ export const useAttachmentsStore = defineStore('attachments', {
 				this.loading = false
 			}
 		},
-		async upload(objectType, objectId, file) {
+		async upload(objectType, objectId, file, tag = '') {
 			this.uploading = true
 			this.error = null
 			try {
-				const data = await post('/attachment', {
-					objectType,
-					objectId,
-					file: {
-						name: file.name,
-						data: file.data,
-						size: file.size,
-						tag: file.tag || '',
-						description: file.description || '',
-					},
-				})
+				const chunkSize = 1024 * 1024 // 1MB chunks
+				const totalChunks = Math.ceil(file.size / chunkSize)
+				const uploadId = Math.random().toString(36).substring(2) + Date.now().toString(36)
+
+				for (let i = 0; i < totalChunks; i++) {
+					const start = i * chunkSize
+					const end = Math.min(start + chunkSize, file.size)
+					const chunk = file.slice(start, end)
+					const formData = new FormData()
+					formData.append('chunk', chunk, file.name + '.part' + i)
+					formData.append('index', i)
+					formData.append('total', totalChunks)
+					formData.append('uploadId', uploadId)
+					await postForm('/attachment/chunk', formData)
+				}
+
+				const finalizeForm = new FormData()
+				finalizeForm.append('objectType', objectType)
+				finalizeForm.append('objectId', objectId)
+				finalizeForm.append('uploadId', uploadId)
+				finalizeForm.append('filename', file.name)
+				finalizeForm.append('tag', tag || '')
+				finalizeForm.append('total', totalChunks)
+				const data = await postForm('/attachment/finalize', finalizeForm)
 				if (data) this.items.push(data)
 				return data
 			} catch (err) {

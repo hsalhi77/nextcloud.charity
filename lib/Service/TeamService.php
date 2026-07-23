@@ -169,6 +169,16 @@ class TeamService {
 	 */
 	public function getUsersByGroup(string $groupName): array {
 		$group = $this->groupManager->get($groupName);
+		if (!$group) {
+			// Fallback: look up by display name (needed when group ID differs from group name)
+			$lower = strtolower($groupName);
+			foreach ($this->groupManager->search($groupName) as $g) {
+				if (strtolower($g->getDisplayName()) === $lower) {
+					$group = $g;
+					break;
+				}
+			}
+		}
 		if (!$group) return [];
 		$result = [];
 		foreach ($group->getUsers() as $user) {

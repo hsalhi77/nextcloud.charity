@@ -100,44 +100,283 @@ class AttachmentService {
 	 * Create an attachment record and store the file under Charity/.
 	 */
 	public function create(string $objectType, int $objectId, array $file, string $userId) {
-		$mapper = $this->getMapperForObject($objectType);
-		$object = $mapper->find($objectId);
+		$this->logger->info('Charity attachment create start', [
+			'app' => 'charity',
+			'objectType' => $objectType,
+			'objectId' => $objectId,
+			'fileName' => $file['name'] ?? null,
+			'fileSize' => $file['size'] ?? null,
+			'hasFileData' => !empty($file['data']),
+			'userId' => $userId,
+		]);
+		try {
+			$mapper = $this->getMapperForObject($objectType);
+			$object = $mapper->find($objectId);
 
-		$permObjectType = $objectType;
-		$permObjectId = $objectId;
-		if (($objectType === 'cc_Payment' || $objectType === 'cc_Update') && $object->getCaseId()) {
-			$permObjectType = 'cc_Case';
-			$permObjectId = $object->getCaseId();
+			$permObjectType = $objectType;
+			$permObjectId = $objectId;
+			if (($objectType === 'cc_Payment' || $objectType === 'cc_Update') && $object->getCaseId()) {
+				$permObjectType = 'cc_Case';
+				$permObjectId = $object->getCaseId();
+			}
+			$this->permissionService->checkPermission($this->caseMapper, $permObjectType, $permObjectId, Acl::PERMISSION_READ);
+
+			$attachment = new cc_attachment();
+			$attachment->setObjectId($objectId);
+			$attachment->setObjectType($objectType);
+			$attachment->setCreated(date('Y-m-d H:i:s'));
+			$attachment->setUpdated(date('Y-m-d H:i:s'));
+			$attachment->setIsactive(true);
+			$attachment->setTag($file['tag'] ?? '');
+			$attachment->setDescription($file['description'] ?? '');
+			$attachment->setData($file['name']);
+			$attachment->setSize((int)($file['size'] ?? 0));
+
+			$tmpName = $file['tmp_name'] ?? '';
+			if (!empty($tmpName) && is_uploaded_file($tmpName)) {
+				$tmpSize = filesize($tmpName);
+				$this->logger->info('Charity attachment reading uploaded file', [
+					'app' => 'charity',
+					'tmpName' => $tmpName,
+					'tmpSize' => $tmpSize,
+				]);
+				if ($tmpSize === 0) {
+					throw new \InvalidArgumentException('Uploaded file is empty (upload may have been truncated by the web server)');
+				}
+				$base = file_get_contents($tmpName);
+				if ($base === false) {
+					throw new \RuntimeException('Failed to read uploaded file');
+				}
+			} else {
+				$base = $file['data'] ?? '';
+				if (strpos($base, ',') !== false) {
+					$base = explode(',', $base, 2)[1];
+				}
+				$decoded = base64_decode($base, true);
+				if ($decoded === false) {
+					throw new \InvalidArgumentException('Invalid base64 data for attachment');
+				}
+				$base = $decoded;
+			}
+
+			$filename = str_replace([':', '-', ' '], '_', date('Y-m-d H:i:s')) . '_' . ($file['name'] ?? 'unnamed');
+			$attachment->setName($filename);
+
+			$folder = $this->getObjectFolder($objectType, $objectId);
+			$fileNode = $folder->newFile($filename);
+			$fileNode->putContent($base);
+
+			$attachment->setUrl($this->getFileUrl($objectType, $objectId, $fileNode->getId()));
+
+			$result = $this->mapper->insert($attachment);
+			$this->logger->info('Charity attachment create success', [
+				'app' => 'charity',
+				'attachmentId' => $result->getId(),
+				'fileName' => $filename,
+			]);
+			return $result;
+		} catch (\Throwable $e) {
+			$this->logger->error('Charity attachment create failed: ' . $e->getMessage(), [
+				'app' => 'charity',
+				'objectType' => $objectType,
+				'objectId' => $objectId,
+				'fileName' => $file['name'] ?? null,
+				'fileSize' => $file['size'] ?? null,
+				'exceptionClass' => get_class($e),
+				'trace' => $e->getTraceAsString(),
+			]);
+			throw $e;
 		}
-		$this->permissionService->checkPermission($this->caseMapper, $permObjectType, $permObjectId, Acl::PERMISSION_READ);
+	}
 
-		$attachment = new cc_attachment();
-		$attachment->setObjectId($objectId);
-		$attachment->setObjectType($objectType);
-		$attachment->setCreated(date('Y-m-d H:i:s'));
-		$attachment->setUpdated(date('Y-m-d H:i:s'));
-		$attachment->setIsactive(true);
-		$attachment->setTag($file['tag'] ?? '');
-		$attachment->setDescription($file['description'] ?? '');
-		$attachment->setData($file['name']);
-		$attachment->setSize((int)($file['size'] ?? 0));
-
-		$base = $file['data'];
-		if (strpos($base, ',') !== false) {
-			$base = explode(',', $base, 2)[1];
+	/**
+	 * Get the temporary directory path for a chunked upload.
+	 */
+	private function getChunkDir(string $uploadId): string {
+		$base = sys_get_temp_dir() . '/charity_upload_' . preg_replace('/[^a-zA-Z0-9_-]/', '', $uploadId);
+		if (!is_dir($base)) {
+			mkdir($base, 0700, true);
 		}
-		$base = base64_decode($base);
+		return $base;
+	}
 
-		$filename = str_replace([':', '-', ' '], '_', date('Y-m-d H:i:s')) . '_' . $file['name'];
-		$attachment->setName($filename);
+	/**
+	 * Store a single chunk of a chunked upload.
+	 */
+	public function storeChunk(string $uploadId, int $index, int $total, ?array $uploadedFile): void {
+		if ($uploadId === '' || $total <= 0 || $index < 0 || $index >= $total) {
+			throw new \InvalidArgumentException('Invalid chunk upload parameters');
+		}
+		$uploadedFile = $uploadedFile ?? [];
+		$tmpName = $uploadedFile['tmp_name'] ?? '';
+		$error = (int)($uploadedFile['error'] ?? UPLOAD_ERR_NO_FILE);
+		if ($error !== UPLOAD_ERR_OK || empty($tmpName) || !is_uploaded_file($tmpName)) {
+			$this->logger->error('Charity attachment chunk upload failed', [
+				'app' => 'charity',
+				'uploadId' => $uploadId,
+				'index' => $index,
+				'error' => $error,
+				'tmpName' => $tmpName,
+			]);
+			throw new \InvalidArgumentException('Chunk upload failed with error code ' . $error);
+		}
+		$chunkDir = $this->getChunkDir($uploadId);
+		if (!is_dir($chunkDir) || !is_writable($chunkDir)) {
+			throw new \RuntimeException('Chunk directory is not writable: ' . $chunkDir);
+		}
+		$target = $chunkDir . '/' . $index;
+		if (!move_uploaded_file($tmpName, $target)) {
+			$error = error_get_last();
+			$this->logger->error('Charity attachment move_uploaded_file failed', [
+				'app' => 'charity',
+				'uploadId' => $uploadId,
+				'index' => $index,
+				'source' => $tmpName,
+				'target' => $target,
+				'lastError' => $error,
+			]);
+			throw new \RuntimeException('Failed to store upload chunk');
+		}
+		$this->logger->info('Charity attachment chunk stored', [
+			'app' => 'charity',
+			'uploadId' => $uploadId,
+			'index' => $index,
+			'total' => $total,
+		]);
+	}
+
+	/**
+	 * Finalize a chunked upload: reassemble chunks, write the file, and create the attachment record.
+	 */
+	public function finalizeUpload(string $objectType, int $objectId, string $uploadId, string $filename, string $tag, string $description, int $total, string $userId): cc_attachment {
+		$this->logger->info('Charity attachment finalize start', [
+			'app' => 'charity',
+			'objectType' => $objectType,
+			'objectId' => $objectId,
+			'uploadId' => $uploadId,
+			'filename' => $filename,
+			'total' => $total,
+			'userId' => $userId,
+		]);
+		try {
+			if ($uploadId === '' || $filename === '' || $total <= 0) {
+				throw new \InvalidArgumentException('Missing upload id, filename or total chunks');
+			}
+			$mapper = $this->getMapperForObject($objectType);
+			$object = $mapper->find($objectId);
+
+			$permObjectType = $objectType;
+			$permObjectId = $objectId;
+			if (($objectType === 'cc_Payment' || $objectType === 'cc_Update') && $object->getCaseId()) {
+				$permObjectType = 'cc_Case';
+				$permObjectId = $object->getCaseId();
+			}
+			$this->permissionService->checkPermission($this->caseMapper, $permObjectType, $permObjectId, Acl::PERMISSION_READ);
+
+			$chunkDir = $this->getChunkDir($uploadId);
+			$chunks = glob($chunkDir . '/*');
+			sort($chunks, SORT_NATURAL);
+			if (count($chunks) !== $total) {
+				throw new \InvalidArgumentException('Expected ' . $total . ' chunks but found ' . count($chunks));
+			}
+			$expectedChunks = [];
+			for ($i = 0; $i < $total; $i++) {
+				$expectedChunks[] = $chunkDir . '/' . $i;
+			}
+			if ($chunks !== $expectedChunks) {
+				throw new \InvalidArgumentException('Missing or unexpected upload chunks');
+			}
+
+			$tmpFile = tempnam(sys_get_temp_dir(), 'charity_finalize_');
+			$out = fopen($tmpFile, 'wb');
+			if (!$out) {
+				throw new \RuntimeException('Failed to create temporary file for reassembly');
+			}
+			$totalSize = 0;
+			foreach ($chunks as $chunk) {
+				$in = fopen($chunk, 'rb');
+				if (!$in) {
+					fclose($out);
+					unlink($tmpFile);
+					throw new \RuntimeException('Failed to read chunk');
+				}
+				$bytes = stream_copy_to_stream($in, $out);
+				fclose($in);
+				if ($bytes === false) {
+					fclose($out);
+					unlink($tmpFile);
+					throw new \RuntimeException('Failed to copy chunk');
+				}
+				$totalSize += $bytes;
+			}
+			fclose($out);
+
+			foreach ($chunks as $chunk) {
+				unlink($chunk);
+			}
+			rmdir($chunkDir);
+
+			if ($totalSize === 0) {
+				unlink($tmpFile);
+				throw new \InvalidArgumentException('Reassembled file is empty');
+			}
+
+			$safeFilename = str_replace([':', '-', ' '], '_', date('Y-m-d H:i:s')) . '_' . $filename;
 
 		$folder = $this->getObjectFolder($objectType, $objectId);
-		$fileNode = $folder->newFile($filename);
-		$fileNode->putContent($base);
+		$fileNode = $folder->newFile($safeFilename);
+		$stream = fopen($tmpFile, 'rb');
+		if (!$stream) {
+			unlink($tmpFile);
+			throw new \RuntimeException('Failed to open reassembled file');
+		}
+		try {
+			$fileNode->putContent($stream);
+		} finally {
+			if (is_resource($stream)) {
+				fclose($stream);
+			}
+			unlink($tmpFile);
+		}
 
-		$attachment->setUrl($this->getFileUrl($objectType, $objectId, $fileNode->getId()));
+			$attachment = new cc_attachment();
+			$attachment->setObjectId($objectId);
+			$attachment->setObjectType($objectType);
+			$attachment->setCreated(date('Y-m-d H:i:s'));
+			$attachment->setUpdated(date('Y-m-d H:i:s'));
+			$attachment->setIsactive(true);
+			$attachment->setTag($tag);
+			$attachment->setDescription($description);
+			$attachment->setData($filename);
+			$attachment->setSize($totalSize);
+			$attachment->setName($safeFilename);
+			$attachment->setUrl($this->getFileUrl($objectType, $objectId, $fileNode->getId()));
 
-		return $this->mapper->insert($attachment);
+			$result = $this->mapper->insert($attachment);
+			$this->logger->info('Charity attachment finalize success', [
+				'app' => 'charity',
+				'attachmentId' => $result->getId(),
+				'fileName' => $safeFilename,
+				'size' => $totalSize,
+			]);
+			return $result;
+		} catch (\Throwable $e) {
+			$this->logger->error('Charity attachment finalize failed: ' . $e->getMessage(), [
+				'app' => 'charity',
+				'objectType' => $objectType,
+				'objectId' => $objectId,
+				'uploadId' => $uploadId,
+				'filename' => $filename,
+				'exceptionClass' => get_class($e),
+				'trace' => $e->getTraceAsString(),
+			]);
+			$chunkDir = $this->getChunkDir($uploadId);
+			if (is_dir($chunkDir)) {
+				array_map('unlink', glob($chunkDir . '/*'));
+				rmdir($chunkDir);
+			}
+			throw $e;
+		}
 	}
 
 	/**
