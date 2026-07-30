@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { post, postForm } from '../services/api.js'
+import { post, postForm, del } from '../services/api.js'
 
 function normaliseDate(item, field) {
 	if (item && item[field] && typeof item[field] === 'object' && item[field].date) {

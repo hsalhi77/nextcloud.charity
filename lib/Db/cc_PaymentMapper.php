@@ -21,6 +21,7 @@ class cc_PaymentMapper extends CharityMapper {
             'paymentDate' => 'payment_date',
             'paymentType' => 'payment_type',
             'paymentAmount' => 'payment_amount',
+            'paidBy' => 'paid_by',
         ];
         foreach ($param as $key => $val) {
             if ($key === '' || $key[0] === '_' || $val === '') {

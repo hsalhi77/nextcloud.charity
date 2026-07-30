@@ -62,6 +62,7 @@ import EntityFilter from '../components/EntityFilter.vue'
 import { usePaymentsStore, useCasesStore } from '../stores/entities.js'
 import { useUiStore } from '../stores/ui.js'
 import { useUserStore } from '../stores/user.js'
+import { post } from '../services/api.js'
 import { translate as t } from '@nextcloud/l10n'
 
 export default {
@@ -90,6 +91,7 @@ export default {
 		return {
 			filtersVisible: false,
 			filters: {},
+			users: [],
 		}
 	},
 	computed: {
@@ -119,12 +121,16 @@ export default {
 					title: `${String(c.id).padStart(10, '0')} - ${c.firstName || ''} ${c.lastName || ''}`.trim(),
 				}))
 		},
+		userOptions() {
+			return this.users || []
+		},
 		filterFields() {
 			return [
 				{ key: 'caseId', label: t('charity', 'Case'), type: 'select', options: this.caseOptions, optionLabel: 'title', optionValue: 'id' },
 				{ key: 'paymentDate', label: t('charity', 'Payment Date'), type: 'text', inputType: 'date' },
 				{ key: 'paymentType', label: t('charity', 'Payment Type'), type: 'text' },
 				{ key: 'paymentAmount', label: t('charity', 'Amount'), type: 'text', inputType: 'number' },
+				{ key: 'paidBy', label: t('charity', 'Cashbook'), type: 'select', options: this.userOptions, optionLabel: 'displayName', optionValue: 'uid' },
 			]
 		},
 		actions() {
@@ -153,6 +159,13 @@ export default {
 			this.paymentsStore.fetchAll(),
 			this.casesStore.fetchAll(),
 		])
+		try {
+			const result = await post('/team/usersByGroup', { params: { group: 'Charity Field' } })
+			this.users = result || []
+		} catch (e) {
+			console.error('Failed to load users', e)
+			this.users = []
+		}
 		if (this.$route.query.highlight) {
 			const id = Number(this.$route.query.highlight)
 			const item = this.paymentsStore.items.find(i => i.id === id)

@@ -3,12 +3,18 @@ namespace OCA\Charity\Service;
 
 use OCP\IDBConnection;
 use OCP\DB\QueryBuilder\IQueryBuilder;
+use OCP\IGroupManager;
+use OCP\IUserManager;
 
 class DashboardService {
 	private IDBConnection $db;
+	private IGroupManager $groupManager;
+	private IUserManager $userManager;
 
-	public function __construct(IDBConnection $db) {
+	public function __construct(IDBConnection $db, IGroupManager $groupManager, IUserManager $userManager) {
 		$this->db = $db;
+		$this->groupManager = $groupManager;
+		$this->userManager = $userManager;
 	}
 
 	public function getStats(): array {
@@ -19,6 +25,7 @@ class DashboardService {
 			'totalPayments' => $this->getPaymentTotal('Payment'),
 			'totalExpensePayments' => $this->getPaymentTotal('Expense Payment'),
 			'cityStats' => $this->getCityStats(),
+			'activityByField' => $this->getActivityByField(),
 		];
 	}
 
@@ -95,5 +102,161 @@ class DashboardService {
 				'paidAmount' => (float)$row['paid_amount'],
 			];
 		}, $rows);
+	}
+
+	private function getActivityWindow(): array {
+		$start = (new \DateTime('first day of this month'))->modify('-5 months')->format('Y-m-d');
+		$end = (new \DateTime('last day of this month'))->format('Y-m-d');
+		return [$start, $end];
+	}
+
+	private function getCharityFieldUsers(): array {
+		$groupName = 'Charity Field';
+		$group = null;
+		foreach ($this->groupManager->search($groupName) as $g) {
+			if (strtolower($g->getDisplayName()) === strtolower($groupName)) {
+				$group = $g;
+				break;
+			}
+		}
+		if (!$group) {
+			$group = $this->groupManager->get($groupName);
+		}
+		return $group ? $group->getUsers() : [];
+	}
+
+	private function getMonthLabels(): array {
+		$labels = [];
+		$date = new \DateTime('first day of this month');
+		for ($i = 0; $i < 6; $i++) {
+			$ym = $date->format('Y-m');
+			$labels[$ym] = $date->format('M-y');
+			$date->modify('-1 month');
+		}
+		return array_reverse($labels, true);
+	}
+
+	private function aggregateByMonthAndUser(string $table, string $userColumn, string $dateColumn, array $userIds, string $startDate, string $endDate): array {
+		$counts = [];
+		$qb = $this->db->getQueryBuilder();
+		$qb->select($userColumn, $dateColumn)
+			->from($table)
+			->where($qb->expr()->gte($dateColumn, $qb->createNamedParameter($startDate)))
+			->andWhere($qb->expr()->lte($dateColumn, $qb->createNamedParameter($endDate)))
+			->andWhere($qb->expr()->in($userColumn, $qb->createNamedParameter($userIds, IQueryBuilder::PARAM_STR_ARRAY)));
+		$result = $qb->executeQuery();
+		while ($row = $result->fetch()) {
+			$ym = (new \DateTime($row[$dateColumn]))->format('Y-m');
+			$uid = $row[$userColumn];
+			if (!isset($counts[$ym])) {
+				$counts[$ym] = [];
+			}
+			if (!isset($counts[$ym][$uid])) {
+				$counts[$ym][$uid] = 0;
+			}
+			$counts[$ym][$uid]++;
+		}
+		$result->closeCursor();
+		return $counts;
+	}
+
+	private function getActivityByField(): array {
+		[$startDate, $endDate] = $this->getActivityWindow();
+		$users = $this->getCharityFieldUsers();
+		if (empty($users)) {
+			return [];
+		}
+		$userIds = array_keys($users);
+		$months = $this->getMonthLabels();
+
+		// Initialise the matrix: every month has a slot for every user.
+		$matrix = [];
+		foreach ($months as $ym => $label) {
+			$matrix[$ym] = ['month' => $label, 'users' => []];
+			foreach ($users as $uid => $user) {
+				$matrix[$ym]['users'][$uid] = [
+					'uid' => $uid,
+					'displayName' => $user->getDisplayName(),
+					'cases' => 0,
+					'payments' => 0,
+					'updates' => 0,
+				];
+			}
+		}
+
+		foreach ($this->aggregateByMonthAndUser('cc_case', 'referred_by', 'date_added', $userIds, $startDate, $endDate) as $ym => $counts) {
+			foreach ($counts as $uid => $count) {
+				if (isset($matrix[$ym]['users'][$uid])) {
+					$matrix[$ym]['users'][$uid]['cases'] = $count;
+				}
+			}
+		}
+		foreach ($this->aggregateByMonthAndUser('cc_payment', 'paid_by', 'payment_date', $userIds, $startDate, $endDate) as $ym => $counts) {
+			foreach ($counts as $uid => $count) {
+				if (isset($matrix[$ym]['users'][$uid])) {
+					$matrix[$ym]['users'][$uid]['payments'] = $count;
+				}
+			}
+		}
+		foreach ($this->aggregateByMonthAndUser('cc_update', 'update_by', 'update_date', $userIds, $startDate, $endDate) as $ym => $counts) {
+			foreach ($counts as $uid => $count) {
+				if (isset($matrix[$ym]['users'][$uid])) {
+					$matrix[$ym]['users'][$uid]['updates'] = $count;
+				}
+			}
+		}
+
+		// Determine which users had any activity in the window.
+		$totals = [];
+		foreach ($userIds as $uid) {
+			$totals[$uid] = 0;
+		}
+		foreach ($matrix as $monthData) {
+			foreach ($monthData['users'] as $uid => $u) {
+				$totals[$uid] += $u['cases'] + $u['payments'] + $u['updates'];
+			}
+		}
+		$activeUserIds = array_filter($userIds, static function ($uid) use ($totals) {
+			return $totals[$uid] > 0;
+		});
+		usort($activeUserIds, static function ($a, $b) use ($totals, $users) {
+			if ($totals[$b] !== $totals[$a]) {
+				return $totals[$b] <=> $totals[$a];
+			}
+			return strcasecmp($users[$a]->getDisplayName(), $users[$b]->getDisplayName());
+		});
+
+		if (empty($activeUserIds)) {
+			return [];
+		}
+
+		// Drop months with no activity at all.
+		$matrix = array_filter($matrix, static function ($monthData) use ($activeUserIds) {
+			foreach ($activeUserIds as $uid) {
+				$u = $monthData['users'][$uid];
+				if (($u['cases'] + $u['payments'] + $u['updates']) > 0) {
+					return true;
+				}
+			}
+			return false;
+		});
+
+		if (empty($matrix)) {
+			return [];
+		}
+
+		// Build the final array, keeping only active users in each month.
+		$result = [];
+		foreach ($matrix as $ym => $monthData) {
+			$monthUsers = [];
+			foreach ($activeUserIds as $uid) {
+				$monthUsers[] = $monthData['users'][$uid];
+			}
+			$result[] = [
+				'month' => $monthData['month'],
+				'users' => $monthUsers,
+			];
+		}
+		return $result;
 	}
 }
