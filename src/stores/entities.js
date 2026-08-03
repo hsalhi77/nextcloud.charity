@@ -95,6 +95,7 @@ export const useUpdatesStore = createEntityStore('updates', '/updates', ['update
 export const useCitiesStore = createEntityStore('cities', '/city')
 export const useCaseTypesStore = createEntityStore('caseTypes', '/casetype')
 export const useUpdateTypesStore = createEntityStore('updateTypes', '/updatetype')
+export const useTransfersStore = createEntityStore('transfers', '/transfers', ['transferDate'])
 
 export const useAttachmentsStore = defineStore('attachments', {
 	state: () => ({

@@ -29,6 +29,7 @@
 			:columns="columns"
 			:items="paymentsStore.items"
 			:actions="actions"
+			:actions-filter="actionsFilter"
 			:empty-text="t('charity', 'No payments found')"
 			@row-click="openDetailPanel"
 			@action="onAction" />
@@ -45,6 +46,14 @@
 			<div class="cm-payments-footer__row">
 				<span class="cm-payments-footer__label">{{ t('charity', 'Expense Payment') }}</span>
 				<span class="cm-payments-footer__value">{{ formatAmount(totals.expensePayment) }}</span>
+			</div>
+			<div class="cm-payments-footer__row">
+				<span class="cm-payments-footer__label">{{ t('charity', 'Transfer Payment') }}</span>
+				<span class="cm-payments-footer__value">{{ formatAmount(totals.transferPayment) }}</span>
+			</div>
+			<div class="cm-payments-footer__row">
+				<span class="cm-payments-footer__label">{{ t('charity', 'Transfer Receipt') }}</span>
+				<span class="cm-payments-footer__value">{{ formatAmount(totals.transferReceipt) }}</span>
 			</div>
 			<div class="cm-payments-footer__row cm-payments-footer__row--balance">
 				<span class="cm-payments-footer__label">{{ t('charity', 'Balance') }}</span>
@@ -106,11 +115,19 @@ export default {
 			const expensePayment = items
 				.filter(p => p.paymentType === 'Expense Payment')
 				.reduce((sum, p) => sum + (parseFloat(p.paymentAmount) || 0), 0)
+			const transferPayment = items
+				.filter(p => p.paymentType === 'Transfer Payment')
+				.reduce((sum, p) => sum + (parseFloat(p.paymentAmount) || 0), 0)
+			const transferReceipt = items
+				.filter(p => p.paymentType === 'Transfer Receipt')
+				.reduce((sum, p) => sum + (parseFloat(p.paymentAmount) || 0), 0)
 			return {
 				receipt,
 				payment,
 				expensePayment,
-				balance: receipt - payment - expensePayment,
+				transferPayment,
+				transferReceipt,
+				balance: receipt - payment - expensePayment - transferPayment + transferReceipt,
 			}
 		},
 		caseOptions() {
@@ -209,6 +226,9 @@ export default {
 		onAction({ name, item }) {
 			if (name === 'edit') this.openEditPanel(item)
 			if (name === 'delete') this.deletePayment(item)
+		},
+		actionsFilter(item) {
+			return item.transferId == null
 		},
 		async deletePayment(item) {
 			if (!confirm(t('charity', 'Are you sure you want to delete this payment?'))) return

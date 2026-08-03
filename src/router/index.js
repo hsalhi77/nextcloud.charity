@@ -13,6 +13,7 @@ const routes = [
 	{ path: '/city', name: 'city', component: () => import('../views/City.vue') },
 	{ path: '/casetype', name: 'casetype', component: () => import('../views/CaseType.vue') },
 	{ path: '/updatetype', name: 'updatetype', component: () => import('../views/UpdateType.vue') },
+	{ path: '/transfers', name: 'transfers', component: () => import('../views/Transfers.vue') },
 ]
 
 export default new VueRouter({

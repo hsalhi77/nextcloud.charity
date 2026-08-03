@@ -41,6 +41,8 @@
 					<div>{{ t('charity', 'Receipt') }}: {{ formatAmount(stats.totalReceipts) }}</div>
 					<div>{{ t('charity', 'Payment') }}: {{ formatAmount(stats.totalPayments) }}</div>
 					<div>{{ t('charity', 'Expense Payment') }}: {{ formatAmount(stats.totalExpensePayments) }}</div>
+					<div>{{ t('charity', 'Transfer Payment') }}: {{ formatAmount(stats.totalTransferPayments) }}</div>
+					<div>{{ t('charity', 'Transfer Receipt') }}: {{ formatAmount(stats.totalTransferReceipts) }}</div>
 				</div>
 			</div>
 
@@ -92,6 +94,8 @@ export default {
 				totalReceipts: 0,
 				totalPayments: 0,
 				totalExpensePayments: 0,
+				totalTransferPayments: 0,
+				totalTransferReceipts: 0,
 				payoutRatio: 0,
 				cityStats: [],
 			},

@@ -41,7 +41,7 @@
 <script>
 import { NcTextField, NcTextArea, NcSelect, NcLoadingIcon } from '@nextcloud/vue'
 import { useUiStore } from '../stores/ui.js'
-import { useCasesStore, usePaymentsStore, useUpdatesStore, useCitiesStore, useCaseTypesStore, useUpdateTypesStore } from '../stores/entities.js'
+import { useCasesStore, usePaymentsStore, useUpdatesStore, useCitiesStore, useCaseTypesStore, useUpdateTypesStore, useTransfersStore } from '../stores/entities.js'
 import { post } from '../services/api.js'
 import { translate as t } from '@nextcloud/l10n'
 
@@ -67,6 +67,7 @@ export default {
 			cc_City: useCitiesStore(),
 			cc_CaseType: useCaseTypesStore(),
 			cc_UpdateType: useUpdateTypesStore(),
+			cc_Transfer: useTransfersStore(),
 		}
 		return { ui, stores, t }
 	},
@@ -144,6 +145,15 @@ export default {
 				return [
 					{ key: 'title', label: t('charity', 'Title'), type: 'text', required: true },
 				]
+			case 'cc_Transfer':
+				return [
+					{ key: 'transferDate', label: t('charity', 'Transfer Date'), type: 'date', required: true },
+					{ key: 'ref', label: t('charity', 'Reference'), type: 'text' },
+					{ key: 'amount', label: t('charity', 'Amount'), type: 'number', required: true },
+					{ key: 'paidFrom', label: t('charity', 'Paid From'), type: 'select', options: this.users, optionLabel: 'displayName', optionValue: 'uid', required: true },
+					{ key: 'paidTo', label: t('charity', 'Paid To'), type: 'select', options: this.users, optionLabel: 'displayName', optionValue: 'uid', required: true },
+					{ key: 'description', label: t('charity', 'Description'), type: 'textarea' },
+				]
 			default:
 				return []
 			}
@@ -178,13 +188,14 @@ export default {
 				cc_City: [],
 				cc_CaseType: [],
 				cc_UpdateType: [],
+				cc_Transfer: [],
 			}[this.entityType] || []
 			await Promise.all(needed.map(async key => {
 				if (this.stores[key]) {
 					await this.stores[key].fetchAll()
 				}
 			}))
-			if (this.entityType === 'cc_Case' || this.entityType === 'cc_Payment' || this.entityType === 'cc_Update') {
+			if (this.entityType === 'cc_Case' || this.entityType === 'cc_Payment' || this.entityType === 'cc_Update' || this.entityType === 'cc_Transfer') {
 				try {
 					const result = await post('/team/usersByGroup', { params: { group: 'Charity Field' } })
 					this.users = result || []

@@ -7,6 +7,8 @@ use OCA\Charity\Exceptions\NoPermissionException;
 use OCP\AppFramework\Db\DoesNotExistException;
 
 class cc_PaymentService {
+	private const TRANSFER_TYPES = ['Transfer Payment', 'Transfer Receipt'];
+
 	private $mapper;
 	private AttachmentService $attachmentService;
 	private TeamService $teamService;
@@ -35,6 +37,18 @@ class cc_PaymentService {
 		return $this->mapper->findByCase($caseId);
 	}
 
+	private function assertManualPaymentType(string $type): void {
+		if (in_array($type, self::TRANSFER_TYPES, true)) {
+			throw new \InvalidArgumentException('Transfer payment types cannot be created directly.');
+		}
+	}
+
+	private function assertNotTransferLinked(cc_Payment $item): void {
+		if ($item->getTransferId() !== null) {
+			throw new \InvalidArgumentException('Transfer payment rows cannot be edited or deleted directly.');
+		}
+	}
+
 	public function create($param) {
 		$item = new cc_Payment();
 		$item->setCaseId($param['caseId'] ?? null);
@@ -42,6 +56,7 @@ class cc_PaymentService {
 		$item->setPaymentReceipt($param['paymentReceipt'] ?? '');
 		$item->setPaidBy($param['paidBy'] ?? '');
 		$item->setPaymentType($param['paymentType'] ?? '');
+		$this->assertManualPaymentType($param['paymentType'] ?? '');
 		$item->setPaymentAmount($param['paymentAmount'] ?? 0);
 		$item->setPaymentReference($param['paymentReference'] ?? '');
 		$item->setDescription($param['description'] ?? '');
@@ -49,12 +64,16 @@ class cc_PaymentService {
 	}
 
 	public function update($param, $id) {
-		$item = $this->mapper->find($id);
+		$item = $this->find($id);
+		$this->assertNotTransferLinked($item);
 		if (isset($param['caseId'])) $item->setCaseId($param['caseId']);
 		if (isset($param['paymentDate'])) $item->setPaymentDate(new \DateTime($param['paymentDate']));
 		if (isset($param['paymentReceipt'])) $item->setPaymentReceipt($param['paymentReceipt']);
 		if (isset($param['paidBy'])) $item->setPaidBy($param['paidBy']);
-		if (isset($param['paymentType'])) $item->setPaymentType($param['paymentType']);
+		if (isset($param['paymentType'])) {
+			$this->assertManualPaymentType($param['paymentType']);
+			$item->setPaymentType($param['paymentType']);
+		}
 		if (isset($param['paymentAmount'])) $item->setPaymentAmount($param['paymentAmount']);
 		if (isset($param['paymentReference'])) $item->setPaymentReference($param['paymentReference']);
 		if (array_key_exists('description', $param)) $item->setDescription($param['description']);
@@ -65,9 +84,10 @@ class cc_PaymentService {
 		if (!$this->teamService->isAdmin()) {
 			throw new NoPermissionException('Only Admin and Charity Admin users can delete records.');
 		}
+		$item = $this->find($id);
+		$this->assertNotTransferLinked($item);
 		$this->attachmentService->deleteAllForObject($id, 'cc_Payment', $this->userId);
 		$this->attachmentService->deleteObjectFolder($id, 'cc_Payment');
-		$item = $this->mapper->find($id);
 		return $this->mapper->delete($item);
 	}
 }

@@ -24,6 +24,8 @@ class DashboardService {
 			'totalReceipts' => $this->getPaymentTotal('Receipt'),
 			'totalPayments' => $this->getPaymentTotal('Payment'),
 			'totalExpensePayments' => $this->getPaymentTotal('Expense Payment'),
+			'totalTransferPayments' => $this->getPaymentTotal('Transfer Payment'),
+			'totalTransferReceipts' => $this->getPaymentTotal('Transfer Receipt'),
 			'cityStats' => $this->getCityStats(),
 			'activityByField' => $this->getActivityByField(),
 		];

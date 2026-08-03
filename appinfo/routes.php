@@ -22,6 +22,11 @@ return [
         ['name' => 'payment#update', 'url' => '/payments/{id}/update', 'verb' => 'POST'],
         ['name' => 'payment#destroy', 'url' => '/payments/{id}/delete', 'verb' => 'POST'],
 
+        ['name' => 'transfer#getall', 'url' => '/transfers/getall', 'verb' => 'POST'],
+        ['name' => 'transfer#create', 'url' => '/transfers', 'verb' => 'POST'],
+        ['name' => 'transfer#show', 'url' => '/transfers/{id}/show', 'verb' => 'POST'],
+        ['name' => 'transfer#destroy', 'url' => '/transfers/{id}/delete', 'verb' => 'POST'],
+
         ['name' => 'update#getall', 'url' => '/updates/getall', 'verb' => 'POST'],
         ['name' => 'update#create', 'url' => '/updates', 'verb' => 'POST'],
         ['name' => 'update#show', 'url' => '/updates/{id}/show', 'verb' => 'POST'],

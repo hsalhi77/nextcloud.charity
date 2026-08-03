@@ -17,6 +17,11 @@
 						<CashIcon :size="20" />
 					</template>
 				</NcAppNavigationItem>
+				<NcAppNavigationItem :to="{ name: 'transfers' }" :name="t('charity', 'Internal Transfers')" :active="isActive('transfers')">
+					<template #icon>
+						<SwapHorizontalIcon :size="20" />
+					</template>
+				</NcAppNavigationItem>
 				<NcAppNavigationItem :to="{ name: 'updates' }" :name="t('charity', 'Updates')" :active="isActive('updates')">
 					<template #icon>
 						<BellIcon :size="20" />
@@ -62,6 +67,7 @@ import {
 import ChartBoxIcon from 'vue-material-design-icons/ChartBox.vue'
 import LayersIcon from 'vue-material-design-icons/Layers.vue'
 import CashIcon from 'vue-material-design-icons/Cash.vue'
+import SwapHorizontalIcon from 'vue-material-design-icons/SwapHorizontal.vue'
 import BellIcon from 'vue-material-design-icons/Bell.vue'
 import CogIcon from 'vue-material-design-icons/Cog.vue'
 import MapMarkerIcon from 'vue-material-design-icons/MapMarker.vue'
@@ -82,6 +88,7 @@ export default {
 		ChartBoxIcon,
 		LayersIcon,
 		CashIcon,
+		SwapHorizontalIcon,
 		BellIcon,
 		CogIcon,
 		MapMarkerIcon,

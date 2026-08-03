@@ -1,6 +1,7 @@
 <?php
 namespace OCA\Charity\Db;
 
+use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
 
 class cc_PaymentMapper extends CharityMapper {
@@ -22,6 +23,7 @@ class cc_PaymentMapper extends CharityMapper {
             'paymentType' => 'payment_type',
             'paymentAmount' => 'payment_amount',
             'paidBy' => 'paid_by',
+            'transferId' => 'transfer_id',
         ];
         foreach ($param as $key => $val) {
             if ($key === '' || $key[0] === '_' || $val === '') {
@@ -41,5 +43,17 @@ class cc_PaymentMapper extends CharityMapper {
     public function findByCase($caseId) {
         $sql = 'SELECT * FROM `*PREFIX*cc_payment` WHERE `case_id` = ?';
         return $this->findEntitiesString($sql, [$caseId]);
+    }
+
+    public function findByTransfer($transferId) {
+        $sql = 'SELECT * FROM `*PREFIX*cc_payment` WHERE `transfer_id` = ?';
+        return $this->findEntitiesString($sql, [$transferId]);
+    }
+
+    public function deleteByTransfer($transferId) {
+        $qb = $this->db->getQueryBuilder();
+        $qb->delete('cc_payment')
+            ->where($qb->expr()->eq('transfer_id', $qb->createNamedParameter($transferId, IQueryBuilder::PARAM_INT)));
+        return $qb->executeStatement();
     }
 }

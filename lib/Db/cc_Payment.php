@@ -10,6 +10,7 @@ class cc_Payment extends RelationalEntity {
     protected $paymentAmount;
     protected $paymentReference;
     protected $description;
+    protected $transferId;
 
     public function __construct() {
         $this->addType('id', 'integer');
@@ -21,6 +22,7 @@ class cc_Payment extends RelationalEntity {
         $this->addType('paymentAmount', 'float');
 		$this->addType('paymentReference', 'string');
 		$this->addType('description', 'string');
+        $this->addType('transferId', 'integer');
     }
 
     public function jsonSerialize() {
