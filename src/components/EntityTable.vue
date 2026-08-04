@@ -4,18 +4,25 @@
 			<div
 				v-for="column in columns"
 				:key="column.key"
-				class="cm-table__cell"
-				:style="{ width: column.width || 'auto' }">
+				class="cm-table__cell cm-table__cell--sortable"
+				:style="{ width: column.width || 'auto' }"
+				role="button"
+				tabindex="0"
+				:aria-sort="ariaSort(column)"
+				@click="toggleSort(column)"
+				@keydown.enter="toggleSort(column)"
+				@keydown.space.prevent="toggleSort(column)">
 				{{ column.label }}
+				<span v-if="isSorted(column)" class="cm-table__sort-indicator">{{ sortDirection === 'asc' ? '▲' : '▼' }}</span>
 			</div>
 			<div class="cm-table__cell cm-table__cell--actions" />
 		</div>
 
 		<div
-			v-for="(item, index) in items"
+			v-for="(item, index) in paginatedItems"
 			:key="item.id || index"
 			class="cm-table__row"
-			:data-row-index="index"
+			:data-row-index="originalIndex(index)"
 			tabindex="0"
 			role="button"
 			@click="$emit('row-click', item)"
@@ -33,19 +40,38 @@
 			</div>
 			<div class="cm-table__cell cm-table__cell--actions" @click.stop>
 				<div v-if="actions.length" class="cm-table__actions-dropdown">
-					<button ref="triggerBtn" class="cm-table__actions-trigger" @click="toggleMenu(index, $event)" :aria-label="t('charity', 'Actions')">
+					<button ref="triggerBtn" class="cm-table__actions-trigger" @click="toggleMenu(originalIndex(index), $event)" :aria-label="t('charity', 'Actions')">
 						<DotsVerticalIcon :size="18" />
 					</button>
 				</div>
 			</div>
 		</div>
 
-		<div v-if="!items.length" class="cm-table__empty">
+		<div v-if="!sortedItems.length" class="cm-table__empty">
 			<NcEmptyContent :title="emptyText">
 				<template #action>
 					<slot name="emptyAction" />
 				</template>
 			</NcEmptyContent>
+		</div>
+
+		<div v-if="totalPages > 1" class="cm-table__pagination">
+			<span class="cm-table__pagination-info">
+				{{ t('charity', 'Showing {start}–{end} of {total}', { start: pageStart, end: pageEnd, total: sortedItems.length }) }}
+			</span>
+			<div class="cm-table__pagination-controls">
+				<button
+					class="cm-table__pagination-btn"
+					:disabled="currentPage === 1"
+					:aria-label="t('charity', 'Previous page')"
+					@click="goToPage(currentPage - 1)">‹</button>
+				<span class="cm-table__pagination-page">{{ currentPage }} / {{ totalPages }}</span>
+				<button
+					class="cm-table__pagination-btn"
+					:disabled="currentPage === totalPages"
+					:aria-label="t('charity', 'Next page')"
+					@click="goToPage(currentPage + 1)">›</button>
+			</div>
 		</div>
 
 		<div v-if="menuVisible" class="cm-table__context-menu" :style="menuStyle" @click.stop>
@@ -80,6 +106,8 @@ export default {
 		actions: { type: Array, default: () => [] },
 		actionsFilter: { type: Function, default: null },
 		emptyText: { type: String, default: '' },
+		pageSize: { type: Number, default: 20 },
+		defaultSort: { type: Object, default: null },
 	},
 	emits: ['row-click', 'action'],
 	data() {
@@ -89,7 +117,45 @@ export default {
 			menuItem: null,
 			menuIndex: -1,
 			menuStyle: {},
+			sortKey: this.defaultSort ? this.defaultSort.key : null,
+			sortDirection: this.defaultSort ? this.defaultSort.direction : 'asc',
+			currentPage: 1,
 		}
+	},
+	computed: {
+		sortedItems() {
+			if (!this.sortKey) return this.items
+			const dir = this.sortDirection === 'asc' ? 1 : -1
+			const column = this.columns.find(c => c.key === this.sortKey)
+			if (!column) return this.items
+			return [...this.items].sort((a, b) => {
+				const va = this.sortValue(a, column)
+				const vb = this.sortValue(b, column)
+				if (va === vb) return 0
+				if (va === null || va === undefined || va === '') return 1
+				if (vb === null || vb === undefined || vb === '') return -1
+				if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * dir
+				return String(va).localeCompare(String(vb), undefined, { numeric: true, sensitivity: 'base' }) * dir
+			})
+		},
+		totalPages() {
+			return Math.max(1, Math.ceil(this.sortedItems.length / this.pageSize))
+		},
+		paginatedItems() {
+			const start = (this.currentPage - 1) * this.pageSize
+			return this.sortedItems.slice(start, start + this.pageSize)
+		},
+		pageStart() {
+			return this.sortedItems.length ? (this.currentPage - 1) * this.pageSize + 1 : 0
+		},
+		pageEnd() {
+			return Math.min(this.currentPage * this.pageSize, this.sortedItems.length)
+		},
+	},
+	watch: {
+		sortedItems() {
+			if (this.currentPage > this.totalPages) this.currentPage = this.totalPages
+		},
 	},
 	mounted() {
 		document.addEventListener('click', this.onDocumentClick)
@@ -98,6 +164,39 @@ export default {
 		document.removeEventListener('click', this.onDocumentClick)
 	},
 	methods: {
+		sortValue(item, column) {
+			let value = column.keyPath
+				? column.keyPath.split('.').reduce((obj, key) => obj?.[key], item)
+				: item[column.key]
+			if (value === null || value === undefined) return ''
+			if (typeof value === 'string' && value.trim() !== '' && !isNaN(Number(value))) {
+				return Number(value)
+			}
+			return value
+		},
+		isSorted(column) {
+			return this.sortKey === column.key
+		},
+		ariaSort(column) {
+			if (!this.isSorted(column)) return 'none'
+			return this.sortDirection === 'asc' ? 'ascending' : 'descending'
+		},
+		toggleSort(column) {
+			if (!column.key) return
+			if (this.sortKey === column.key) {
+				this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc'
+			} else {
+				this.sortKey = column.key
+				this.sortDirection = 'asc'
+			}
+			this.currentPage = 1
+		},
+		goToPage(page) {
+			this.currentPage = Math.min(Math.max(1, page), this.totalPages)
+		},
+		originalIndex(index) {
+			return (this.currentPage - 1) * this.pageSize + index
+		},
 		formatValue(item, column) {
 			let value = item[column.key]
 			if (column.formatter) {
@@ -132,9 +231,9 @@ export default {
 			}
 			this.menuActions = this.actions.map(a => ({
 				...a,
-				disabled: this.actionsFilter ? !this.actionsFilter(this.items[index], a) : false,
+				disabled: this.actionsFilter ? !this.actionsFilter(this.sortedItems[index], a) : false,
 			}))
-			this.menuItem = this.items[index]
+			this.menuItem = this.sortedItems[index]
 			this.menuIndex = index
 			this.menuVisible = true
 		},
@@ -155,13 +254,12 @@ export default {
 	border: 1px solid var(--color-border);
 	border-radius: var(--border-radius-large);
 	overflow-x: auto;
-	-webkit-overflow-scrolling: touch;
 }
 
 .cm-table__row {
 	display: flex;
 	align-items: center;
-	padding: 12px 44px 12px 16px;
+	padding: 2px 44px 2px 16px;
 	border-bottom: 1px solid var(--color-border);
 	cursor: pointer;
 	white-space: nowrap;
@@ -192,6 +290,21 @@ export default {
 	padding-inline-start: 0;
 }
 
+.cm-table__cell--sortable {
+	cursor: pointer;
+	user-select: none;
+}
+
+.cm-table__cell--sortable:hover {
+	color: var(--color-primary-element);
+}
+
+.cm-table__sort-indicator {
+	margin-inline-start: 4px;
+	font-size: 10px;
+	color: var(--color-primary-element);
+}
+
 .cm-table__cell--actions {
 	position: absolute;
 	inset-inline-end: 4px;
@@ -203,6 +316,52 @@ export default {
 
 .cm-table__empty {
 	padding: 48px;
+}
+
+.cm-table__pagination {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 4px 12px;
+	border-top: 1px solid var(--color-border);
+	font-size: 12px;
+	color: var(--color-text-maxcontrast);
+}
+
+.cm-table__pagination-info {
+	white-space: nowrap;
+}
+
+.cm-table__pagination-controls {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.cm-table__pagination-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 26px;
+	height: 26px;
+	border: 1px solid var(--color-border);
+	border-radius: var(--border-radius);
+	background: var(--color-main-background);
+	color: var(--color-main-text);
+	font-size: 14px;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.cm-table__pagination-btn:disabled {
+	opacity: 0.4;
+	cursor: default;
+}
+
+.cm-table__pagination-page {
+	min-width: 40px;
+	text-align: center;
 }
 
 .cm-table__badge {

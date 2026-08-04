@@ -29,6 +29,7 @@
 			:columns="columns"
 			:items="updatesStore.items"
 			:actions="actions"
+			:default-sort="{ key: 'id', direction: 'desc' }"
 			:empty-text="t('charity', 'No updates found')"
 			@row-click="openDetailPanel"
 			@action="onAction" />
@@ -178,8 +179,8 @@ export default {
 
 <style scoped>
 .cm-view {
-    padding: 24px;
-    height: 100%;
+    padding: 8px;
+    min-height: 100%;
     display: flex;
     flex-direction: column;
 }
@@ -188,12 +189,12 @@ export default {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 16px;
+    margin-bottom: 8px;
 }
 
 .cm-view__header h1 {
     margin: 0;
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 700;
 }
 

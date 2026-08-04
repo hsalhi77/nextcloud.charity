@@ -114,3 +114,21 @@ export default {
 	height: 100%;
 }
 </style>
+
+<style>
+/* Make the app fill the visible area (below the Nextcloud + app headers)
+   so the menu and content panel reach the bottom of the screen. Pagination
+   keeps each table page inside the viewport, and the container scrolls if
+   content ever grows past it. */
+.charity-app {
+	overflow: auto !important;
+	height: calc(100vh - 100px) !important;
+}
+.charity-app .app-content {
+	overflow: visible !important;
+}
+.charity-app .cm-view {
+	height: auto !important;
+	min-height: 100% !important;
+}
+</style>
