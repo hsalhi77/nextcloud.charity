@@ -56,9 +56,19 @@
 		</div>
 
 		<div v-if="totalPages > 1" class="cm-table__pagination">
-			<span class="cm-table__pagination-info">
-				{{ t('charity', 'Showing {start}–{end} of {total}', { start: pageStart, end: pageEnd, total: sortedItems.length }) }}
-			</span>
+			<div class="cm-table__pagination-left">
+				<span class="cm-table__pagination-info">
+					{{ t('charity', 'Showing {start}–{end} of {total}', { start: pageStart, end: pageEnd, total: sortedItems.length }) }}
+				</span>
+				<label v-if="pageSizeOptions.length" class="cm-table__page-size">
+					{{ t('charity', 'Per page') }}
+					<select class="cm-table__page-size-select"
+						:value="pageSize"
+						@change="onPageSizeChange($event.target.value)">
+						<option v-for="opt in pageSizeOptions" :key="opt" :value="opt">{{ opt }}</option>
+					</select>
+				</label>
+			</div>
 			<div class="cm-table__pagination-controls">
 				<button
 					class="cm-table__pagination-btn"
@@ -107,9 +117,10 @@ export default {
 		actionsFilter: { type: Function, default: null },
 		emptyText: { type: String, default: '' },
 		pageSize: { type: Number, default: 20 },
+		pageSizeOptions: { type: Array, default: () => [] },
 		defaultSort: { type: Object, default: null },
 	},
-	emits: ['row-click', 'action'],
+	emits: ['row-click', 'action', 'page-size-change', 'sort-change'],
 	data() {
 		return {
 			menuVisible: false,
@@ -156,6 +167,9 @@ export default {
 		sortedItems() {
 			if (this.currentPage > this.totalPages) this.currentPage = this.totalPages
 		},
+		pageSize() {
+			this.currentPage = 1
+		},
 	},
 	mounted() {
 		document.addEventListener('click', this.onDocumentClick)
@@ -190,9 +204,14 @@ export default {
 				this.sortDirection = 'asc'
 			}
 			this.currentPage = 1
+			this.$emit('sort-change', { key: this.sortKey, direction: this.sortDirection })
 		},
 		goToPage(page) {
 			this.currentPage = Math.min(Math.max(1, page), this.totalPages)
+		},
+		onPageSizeChange(value) {
+			this.$emit('page-size-change', Number(value))
+			this.currentPage = 1
 		},
 		originalIndex(index) {
 			return (this.currentPage - 1) * this.pageSize + index
@@ -329,8 +348,30 @@ export default {
 	color: var(--color-text-maxcontrast);
 }
 
+.cm-table__pagination-left {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
 .cm-table__pagination-info {
 	white-space: nowrap;
+}
+
+.cm-table__page-size {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	white-space: nowrap;
+}
+
+.cm-table__page-size-select {
+	padding: 2px 6px;
+	border: 1px solid var(--color-border);
+	border-radius: var(--border-radius);
+	background: var(--color-main-background);
+	color: var(--color-main-text);
+	font-size: 12px;
 }
 
 .cm-table__pagination-controls {

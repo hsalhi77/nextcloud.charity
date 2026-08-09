@@ -539,6 +539,63 @@ class AttachmentService {
 	}
 
 	/**
+	 * Resolve an attachment's stored file for inline streaming.
+	 *
+	 * @return array{file: \OCP\Files\File, size: int, mime: string, name: string}
+	 */
+	public function streamFile(int $id): array {
+		$attachment = $this->mapper->find($id);
+		$objectType = $attachment->getObjectType();
+		$objectId = (int)$attachment->getObjectId();
+
+		$permObjectType = $objectType;
+		$permObjectId = $objectId;
+		if (($objectType === 'cc_Payment' || $objectType === 'cc_Update')) {
+			$parent = $objectType === 'cc_Payment'
+				? $this->paymentMapper->find($permObjectId)
+				: $this->updateMapper->find($permObjectId);
+			if ($parent->getCaseId()) {
+				$permObjectType = 'cc_Case';
+				$permObjectId = (int)$parent->getCaseId();
+			}
+		}
+		$this->permissionService->checkPermission(
+			$this->caseMapper,
+			$permObjectType,
+			$permObjectId,
+			Acl::PERMISSION_READ
+		);
+
+		$folder = $this->getObjectFolder($objectType, $objectId);
+		$file = $this->getFileByName($folder, $attachment->getName());
+
+		return [
+			'file' => $file,
+			'size' => $file->getSize(),
+			'mime' => $this->detectMime($attachment->getName()),
+			'name' => $attachment->getData() ?: $attachment->getName(),
+		];
+	}
+
+	/**
+	 * Resolve a previewable MIME type from a stored filename's extension.
+	 */
+	private function detectMime(string $filename): string {
+		$ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+		$map = [
+			'jpg' => 'image/jpeg',
+			'jpeg' => 'image/jpeg',
+			'png' => 'image/png',
+			'gif' => 'image/gif',
+			'webp' => 'image/webp',
+			'bmp' => 'image/bmp',
+			'svg' => 'image/svg+xml',
+			'pdf' => 'application/pdf',
+		];
+		return $map[$ext] ?? 'application/octet-stream';
+	}
+
+	/**
 	 * Resolve the mapper used for permission checks for a given object type.
 	 */
 	private function getMapperForObject(string $objectType) {

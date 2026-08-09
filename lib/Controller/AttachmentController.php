@@ -1,10 +1,16 @@
 <?php
 namespace OCA\Charity\Controller;
 
+use OCA\Charity\Exceptions\NoPermissionException;
+use OCA\Charity\Http\StreamFileResponse;
 use OCA\Charity\Service\AttachmentService;
 use OCA\Charity\Service\Helper;
-use OCP\IRequest;
+use OCP\AppFramework\Db\DoesNotExistException;
+use OCP\AppFramework\Http;
+use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\Controller;
+use OCP\Files\NotFoundException as FilesNotFoundException;
+use OCP\IRequest;
 
 class AttachmentController extends Controller {
     private $service;
@@ -139,5 +145,45 @@ class AttachmentController extends Controller {
             $this->service->delete($id, $this->UserId);
             return true;
         });
+    }
+
+    /**
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     * @param int $id
+     */
+    public function stream(int $id) {
+        try {
+            $data = $this->service->streamFile($id);
+        } catch (NoPermissionException $e) {
+            return new JSONResponse(['message' => $e->getMessage(), 'data' => []], Http::STATUS_FORBIDDEN);
+        } catch (DoesNotExistException $e) {
+            return new JSONResponse(['message' => 'Attachment not found', 'data' => []], Http::STATUS_NOT_FOUND);
+        } catch (FilesNotFoundException $e) {
+            return new JSONResponse(['message' => 'Attachment file not found', 'data' => []], Http::STATUS_NOT_FOUND);
+        } catch (\Throwable $e) {
+            $this->helper->logger->error('Charity attachment stream failed: ' . $e->getMessage(), [
+                'app' => 'charity',
+                'attachmentId' => $id,
+                'exceptionClass' => get_class($e),
+            ]);
+            return new JSONResponse(['message' => 'Preview unavailable', 'data' => []], Http::STATUS_INTERNAL_SERVER_ERROR);
+        }
+
+        $stream = $data['file']->fopen('r');
+        if (!is_resource($stream)) {
+            return new JSONResponse(['message' => 'Preview unavailable', 'data' => []], Http::STATUS_INTERNAL_SERVER_ERROR);
+        }
+
+        return new StreamFileResponse(
+            $stream,
+            $data['size'],
+            $data['mime'],
+            md5((string)$data['file']->getId()),
+            $this->request->getHeader('Range') ?: null,
+            $this->request->getHeader('If-None-Match') ?: null,
+            $this->request->getParam('download') === '1',
+            $data['name']
+        );
     }
 }

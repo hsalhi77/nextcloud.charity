@@ -6,6 +6,8 @@ return [
         ['name' => 'config#get', 'url' => '/api/v1.0/config', 'verb' => 'GET'],
         ['name' => 'config#groupFolders', 'url' => '/api/v1.0/config/groupFolders', 'verb' => 'GET'],
         ['name' => 'config#setValue', 'url' => '/api/v1.0/config/{key}', 'verb' => 'POST'],
+        ['name' => 'config#prefsGet', 'url' => '/api/v1.0/config/prefs', 'verb' => 'GET'],
+        ['name' => 'config#prefsSave', 'url' => '/api/v1.0/config/prefs', 'verb' => 'POST'],
 
         // All entity actions are explicit POST routes. Resource routes are avoided
         // because they conflict with explicit routes and break depending on whether
@@ -64,6 +66,7 @@ return [
         ['name' => 'attachment#index', 'url' => '/attachment/{object_type}', 'verb' => 'POST'],
         ['name' => 'attachment#show', 'url' => '/attachment/{object_id}/{object_type}', 'verb' => 'POST'],
         ['name' => 'attachment#destroy', 'url' => '/attachment/{id}', 'verb' => 'DELETE'],
+        ['name' => 'attachment#stream', 'url' => '/attachment/{id}/file', 'verb' => 'GET'],
 
         ['name' => 'acl#byObject', 'url' => '/acl/byObject/{object_type}/{object_id}', 'verb' => 'POST'],
         ['name' => 'acl#addAcl', 'url' => '/acl', 'verb' => 'POST'],

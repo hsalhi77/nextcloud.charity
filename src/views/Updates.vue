@@ -29,10 +29,14 @@
 			:columns="columns"
 			:items="updatesStore.items"
 			:actions="actions"
-			:default-sort="{ key: 'id', direction: 'desc' }"
+			:page-size="prefs.pageSize"
+			:default-sort="prefs.sortFor('Updates')"
+			:page-size-options="[10, 20, 50, 100]"
 			:empty-text="t('charity', 'No updates found')"
 			@row-click="openDetailPanel"
-			@action="onAction" />
+			@action="onAction"
+			@page-size-change="prefs.setRecordsPerPage"
+			@sort-change="onSortChange" />
 	</div>
 </template>
 
@@ -42,6 +46,7 @@ import PlusIcon from 'vue-material-design-icons/Plus.vue'
 import EntityTable from '../components/EntityTable.vue'
 import EntityFilter from '../components/EntityFilter.vue'
 import { useUpdatesStore, useCasesStore, useUpdateTypesStore } from '../stores/entities.js'
+import { usePrefsStore } from '../stores/prefs.js'
 import { useUiStore } from '../stores/ui.js'
 import { useUserStore } from '../stores/user.js'
 import { translate as t } from '@nextcloud/l10n'
@@ -61,12 +66,14 @@ export default {
 		const updateTypesStore = useUpdateTypesStore()
 		const ui = useUiStore()
 		const userStore = useUserStore()
+		const prefs = usePrefsStore()
 		return {
 			updatesStore,
 			casesStore,
 			updateTypesStore,
 			ui,
 			userStore,
+			prefs,
 			t,
 		}
 	},
@@ -163,6 +170,9 @@ export default {
 		onAction({ name, item }) {
 			if (name === 'edit') this.openEditPanel(item)
 			if (name === 'delete') this.deleteUpdate(item)
+		},
+		onSortChange(sort) {
+			this.prefs.setSort('Updates', sort)
 		},
 		async deleteUpdate(item) {
 			if (!confirm(t('charity', 'Are you sure you want to delete this update?'))) return

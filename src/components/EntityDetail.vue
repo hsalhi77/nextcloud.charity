@@ -1,8 +1,7 @@
 <template>
-	<div class="cm-entity-detail">
+	<div class="cm-entity-detail" :class="{ 'cm-entity-detail--attachments-active': activeTab === 'attachments' }">
 		<div class="cm-entity-detail__tabs" role="tablist">
-			<button
-				v-for="tab in tabs"
+			<button v-for="tab in tabs"
 				:key="tab.name"
 				class="cm-entity-detail__tab"
 				:class="{ 'cm-entity-detail__tab--active': activeTab === tab.name }"
@@ -42,7 +41,10 @@
 							</tr>
 						</thead>
 						<tbody>
-							<tr v-for="payment in relatedPayments" :key="payment.id" class="cm-entity-detail__clickable-row" @click="openPayment(payment.id)">
+							<tr v-for="payment in relatedPayments"
+								:key="payment.id"
+								class="cm-entity-detail__clickable-row"
+								@click="openPayment(payment.id)">
 								<td>{{ formatDate(payment.paymentDate) }}</td>
 								<td>{{ payment.paymentType }}</td>
 								<td>{{ payment.paymentAmount }}</td>
@@ -67,7 +69,10 @@
 							</tr>
 						</thead>
 						<tbody>
-							<tr v-for="update in relatedUpdates" :key="update.id" class="cm-entity-detail__clickable-row" @click="openUpdate(update.id)">
+							<tr v-for="update in relatedUpdates"
+								:key="update.id"
+								class="cm-entity-detail__clickable-row"
+								@click="openUpdate(update.id)">
 								<td>{{ formatDate(update.updateDate) }}</td>
 								<td>{{ formatUpdateType(update.updateTypeId) }}</td>
 								<td>{{ update.updateBy }}</td>
@@ -82,40 +87,77 @@
 
 			<!-- ATTACHMENTS -->
 			<div v-else-if="activeTab === 'attachments'" class="cm-entity-detail__attachments">
-				<h3>{{ t('charity', 'Attachments') }}</h3>
+				<div class="cm-entity-detail__attachments-top">
+					<h3>{{ t('charity', 'Attachments') }}</h3>
 
-				<div v-if="attachmentsStore.loading" class="cm-entity-detail__loading">
-					<NcLoadingIcon :size="24" />
-				</div>
+					<div v-if="attachmentsStore.loading" class="cm-entity-detail__loading">
+						<NcLoadingIcon :size="24" />
+					</div>
 
-				<div v-else-if="attachments.length" class="cm-entity-detail__attachment-list">
-					<div v-for="att in attachments" :key="att.id" class="cm-entity-detail__attachment-row">
-						<a v-if="att.url" :href="att.url" target="_blank" class="cm-entity-detail__attachment-link">
-							{{ att.name || att.data }}
-						</a>
-						<span v-else class="cm-entity-detail__attachment-name">{{ att.name || att.data }}</span>
-						<span v-if="att.tag" class="cm-entity-detail__attachment-tag">{{ att.tag }}</span>
-						<span class="cm-entity-detail__attachment-size">{{ formatFileSize(att.size) }}</span>
-						<button class="cm-entity-detail__attachment-delete" @click="deleteAttachment(att)" :title="t('charity', 'Delete')">&times;</button>
+					<div v-else-if="attachments.length" class="cm-entity-detail__attachment-list">
+						<div v-for="att in attachments"
+							:key="att.id"
+							class="cm-entity-detail__attachment-row"
+							:class="{ 'cm-entity-detail__attachment-row--selected': att.id === selectedAttachmentId }"
+							:data-attachment-id="att.id"
+							@click="selectAttachment(att)">
+							<ChevronRight :size="18" class="cm-entity-detail__attachment-arrow" />
+							<span class="cm-entity-detail__attachment-name">{{ att.data || att.name }}</span>
+							<span v-if="att.tag" class="cm-entity-detail__attachment-tag">{{ att.tag }}</span>
+							<span class="cm-entity-detail__attachment-size">{{ formatFileSize(att.size) }}</span>
+							<button class="cm-entity-detail__attachment-delete" :title="t('charity', 'Delete')" @click.stop="deleteAttachment(att)">
+								&times;
+							</button>
+						</div>
+					</div>
+
+					<div v-else class="cm-entity-detail__coming-soon">
+						{{ t('charity', 'No attachments yet') }}
+					</div>
+
+					<div class="cm-entity-detail__attachment-upload">
+						<div class="cm-entity-detail__upload-tag">
+							<NcTextField v-model="uploadTag" :label="t('charity', 'Tag')" :show-trailing-button="false" />
+						</div>
+						<NcButton v-if="!uploadingFile" type="secondary" @click="triggerFilePicker">
+							{{ t('charity', 'Upload Attachment') }}
+						</NcButton>
+						<div v-else class="cm-entity-detail__upload-progress">
+							<NcLoadingIcon :size="20" />
+							<span>{{ t('charity', 'Uploading...') }}</span>
+						</div>
+						<input ref="fileInput"
+							type="file"
+							class="hidden"
+							@change="onFileSelected">
 					</div>
 				</div>
 
-				<div v-else class="cm-entity-detail__coming-soon">
-					{{ t('charity', 'No attachments yet') }}
-				</div>
-
-				<div class="cm-entity-detail__attachment-upload">
-					<div class="cm-entity-detail__upload-tag">
-						<NcTextField v-model="uploadTag" :label="t('charity', 'Tag')" :show-trailing-button="false" />
+				<div class="cm-entity-detail__preview">
+					<template v-if="previewKind === 'image'">
+						<img v-if="!previewImageError"
+							:src="previewUrl"
+							:alt="selectedAttachment?.name || ''"
+							class="cm-entity-detail__preview-image"
+							@error="previewImageError = true">
+						<div v-else class="cm-entity-detail__preview-empty">
+							{{ t('charity', 'No preview available') }}
+						</div>
+					</template>
+					<iframe v-else-if="previewKind === 'pdf'"
+						:src="previewUrl + '#view=FitH'"
+						class="cm-entity-detail__preview-pdf"
+						:title="selectedAttachment?.name || t('charity', 'Attachment preview')" />
+					<div v-else class="cm-entity-detail__preview-empty">
+						{{ t('charity', 'No preview available') }}
 					</div>
-					<NcButton v-if="!uploadingFile" type="secondary" @click="triggerFilePicker">
-						{{ t('charity', 'Upload Attachment') }}
-					</NcButton>
-					<div v-else class="cm-entity-detail__upload-progress">
-						<NcLoadingIcon :size="20" />
-						<span>{{ t('charity', 'Uploading...') }}</span>
-					</div>
-					<input ref="fileInput" type="file" class="hidden" @change="onFileSelected" />
+					<a v-if="downloadUrl"
+						:href="downloadUrl"
+						:download="downloadFileName"
+						class="cm-entity-detail__preview-download"
+						:title="t('charity', 'Download file')">
+						<Download :size="20" />
+					</a>
 				</div>
 			</div>
 
@@ -151,6 +193,9 @@ import { NcLoadingIcon, NcButton, NcTextField } from '@nextcloud/vue'
 import { useCasesStore, usePaymentsStore, useUpdatesStore, useCaseTypesStore, useUpdateTypesStore, useCitiesStore, useAttachmentsStore } from '../stores/entities.js'
 import { useUiStore } from '../stores/ui.js'
 import { translate as t } from '@nextcloud/l10n'
+import { generateUrl } from '@nextcloud/router'
+import Download from 'vue-material-design-icons/Download.vue'
+import ChevronRight from 'vue-material-design-icons/ChevronRight.vue'
 
 export default {
 	name: 'EntityDetail',
@@ -158,6 +203,8 @@ export default {
 		NcLoadingIcon,
 		NcButton,
 		NcTextField,
+		Download,
+		ChevronRight,
 	},
 	props: {
 		entityType: { type: String, required: true },
@@ -190,6 +237,8 @@ export default {
 			relatedUpdates: [],
 			uploadingFile: false,
 			uploadTag: '',
+			selectedAttachmentId: null,
+			previewImageError: false,
 		}
 	},
 	computed: {
@@ -197,6 +246,24 @@ export default {
 		item() { return this.store?.byId(this.entityId) },
 		attachments() {
 			return this.attachmentsStore.forObject(this.entityType, this.entityId)
+		},
+		selectedAttachment() {
+			if (!this.selectedAttachmentId) return null
+			return this.attachments.find(a => a.id === this.selectedAttachmentId) || null
+		},
+		previewUrl() {
+			if (!this.selectedAttachmentId) return ''
+			return generateUrl('/apps/charity/attachment/{id}/file', { id: this.selectedAttachmentId })
+		},
+		downloadUrl() {
+			if (!this.previewUrl) return ''
+			return this.previewUrl + '?download=1'
+		},
+		downloadFileName() {
+			return this.selectedAttachment?.data || this.selectedAttachment?.name || 'download'
+		},
+		previewKind() {
+			return this.previewKindFor(this.selectedAttachment?.name || this.selectedAttachment?.data)
 		},
 		tabs() {
 			const all = [
@@ -237,8 +304,8 @@ export default {
 					{ key: 'caseId', label: t('charity', 'Case'), formatter: this.formatCase },
 					{ key: 'paymentDate', label: t('charity', 'Payment Date'), formatter: this.formatDate },
 					{ key: 'paymentType', label: t('charity', 'Payment Type') },
-				{ key: 'paymentAmount', label: t('charity', 'Amount') },
-				{ key: 'paymentReference', label: t('charity', 'Payment Reference') },
+					{ key: 'paymentAmount', label: t('charity', 'Amount') },
+					{ key: 'paymentReference', label: t('charity', 'Payment Reference') },
 					{ key: 'paidBy', label: t('charity', 'Cashbook') },
 					{ key: 'description', label: t('charity', 'Description') },
 				]
@@ -341,9 +408,31 @@ export default {
 			if (!this.entityId) return
 			try {
 				await this.attachmentsStore.fetchByObject(this.entityType, this.entityId)
+				this.selectFirstAttachment()
 			} catch (e) {
 				console.error('Failed to load attachments', e)
 			}
+		},
+		selectFirstAttachment() {
+			this.previewImageError = false
+			if (!this.attachments.length) {
+				this.selectedAttachmentId = null
+				return
+			}
+			if (!this.attachments.some(a => a.id === this.selectedAttachmentId)) {
+				this.selectedAttachmentId = this.attachments[0].id
+			}
+		},
+		selectAttachment(att) {
+			this.previewImageError = false
+			this.selectedAttachmentId = att.id
+		},
+		previewKindFor(name) {
+			const ext = String(name || '').split('.').pop().toLowerCase()
+			const images = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg']
+			if (images.includes(ext)) return 'image'
+			if (ext === 'pdf') return 'pdf'
+			return null
 		},
 		triggerFilePicker() {
 			this.$refs.fileInput?.click()
@@ -354,6 +443,7 @@ export default {
 			this.uploadingFile = true
 			try {
 				await this.attachmentsStore.upload(this.entityType, this.entityId, file, this.uploadTag)
+				this.selectFirstAttachment()
 			} catch (err) {
 				console.error(err)
 				alert(err.message || t('charity', 'Upload failed'))
@@ -373,6 +463,7 @@ export default {
 			if (!confirm(t('charity', 'Delete this attachment?'))) return
 			try {
 				await this.attachmentsStore.remove(att.id)
+				this.selectFirstAttachment()
 			} catch (err) {
 				console.error(err)
 				alert(err.message)
@@ -532,6 +623,91 @@ export default {
 	color: var(--color-text-maxcontrast);
 }
 
+.cm-entity-detail--attachments-active {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+.cm-entity-detail--attachments-active .cm-entity-detail__tabs {
+	flex-shrink: 0;
+}
+
+.cm-entity-detail--attachments-active .cm-entity-detail__content {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.cm-entity-detail__attachments {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.cm-entity-detail__attachments-top {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.cm-entity-detail__preview {
+	flex: 0 0 45%;
+	min-height: 0;
+	margin-top: 8px;
+	border: 1px solid var(--color-border);
+	border-radius: var(--border-radius);
+	background: var(--color-background-hover);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+	position: relative;
+}
+
+.cm-entity-detail__preview-download {
+	position: absolute;
+	top: 6px;
+	right: 6px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border-radius: var(--border-radius);
+	color: var(--color-main-text);
+	background: var(--color-main-background);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+	text-decoration: none;
+	transition: background 0.15s, color 0.15s;
+}
+
+.cm-entity-detail__preview-download:hover {
+	background: var(--color-background-hover);
+	color: var(--cm-accent, var(--color-primary-element));
+}
+
+.cm-entity-detail__preview-image {
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+}
+
+.cm-entity-detail__preview-pdf {
+	width: 100%;
+	height: 100%;
+	border: none;
+}
+
+.cm-entity-detail__preview-empty {
+	color: var(--color-text-maxcontrast);
+	font-size: 13px;
+	padding: 16px;
+}
+
 .cm-entity-detail__attachment-list {
 	display: flex;
 	flex-direction: column;
@@ -547,19 +723,23 @@ export default {
 	border: 1px solid var(--color-border);
 	border-radius: var(--border-radius);
 	font-size: 13px;
+	cursor: pointer;
 }
 
-.cm-entity-detail__attachment-link {
-	color: var(--color-primary-element);
-	text-decoration: none;
-	flex: 1;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+.cm-entity-detail__attachment-row--selected {
+	border-color: var(--cm-accent, var(--color-primary-element));
+	background: rgba(var(--cm-accent-rgb, var(--color-primary-element-rgb)), 0.08);
 }
 
-.cm-entity-detail__attachment-link:hover {
-	text-decoration: underline;
+.cm-entity-detail__attachment-arrow {
+	flex-shrink: 0;
+	color: var(--color-text-maxcontrast);
+	transition: transform 0.15s, color 0.15s;
+}
+
+.cm-entity-detail__attachment-row--selected .cm-entity-detail__attachment-arrow {
+	transform: rotate(90deg);
+	color: var(--cm-accent, var(--color-primary-element));
 }
 
 .cm-entity-detail__attachment-name {

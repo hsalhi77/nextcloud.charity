@@ -5,6 +5,7 @@ import App from './App.vue'
 import router from './router'
 import { createPinia, PiniaVuePlugin } from 'pinia'
 import { useUserStore } from './stores/user.js'
+import { usePrefsStore } from './stores/prefs.js'
 
 Vue.use(PiniaVuePlugin)
 const pinia = createPinia()
@@ -28,5 +29,9 @@ const app = new Vue({
 // Fetch user groups on load
 const userStore = useUserStore()
 userStore.fetchGroups()
+
+// Load grid preferences (records per page, per-grid sort defaults)
+const prefsStore = usePrefsStore()
+prefsStore.load().catch(err => console.error(err))
 
 export default app

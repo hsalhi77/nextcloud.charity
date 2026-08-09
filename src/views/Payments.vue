@@ -30,10 +30,14 @@
 			:items="paymentsStore.items"
 			:actions="actions"
 			:actions-filter="actionsFilter"
-			:default-sort="{ key: 'id', direction: 'desc' }"
+			:page-size="prefs.pageSize"
+			:default-sort="prefs.sortFor('Payments')"
+			:page-size-options="[10, 20, 50, 100]"
 			:empty-text="t('charity', 'No payments found')"
 			@row-click="openDetailPanel"
-			@action="onAction" />
+			@action="onAction"
+			@page-size-change="prefs.setRecordsPerPage"
+			@sort-change="onSortChange" />
 
 		<div v-if="!paymentsStore.loading" class="cm-payments-footer">
 			<div class="cm-payments-footer__row">
@@ -70,6 +74,7 @@ import PlusIcon from 'vue-material-design-icons/Plus.vue'
 import EntityTable from '../components/EntityTable.vue'
 import EntityFilter from '../components/EntityFilter.vue'
 import { usePaymentsStore, useCasesStore } from '../stores/entities.js'
+import { usePrefsStore } from '../stores/prefs.js'
 import { useUiStore } from '../stores/ui.js'
 import { useUserStore } from '../stores/user.js'
 import { post } from '../services/api.js'
@@ -89,11 +94,13 @@ export default {
 		const casesStore = useCasesStore()
 		const ui = useUiStore()
 		const userStore = useUserStore()
+		const prefs = usePrefsStore()
 		return {
 			paymentsStore,
 			casesStore,
 			ui,
 			userStore,
+			prefs,
 			t,
 		}
 	},
@@ -227,6 +234,9 @@ export default {
 		onAction({ name, item }) {
 			if (name === 'edit') this.openEditPanel(item)
 			if (name === 'delete') this.deletePayment(item)
+		},
+		onSortChange(sort) {
+			this.prefs.setSort('Payments', sort)
 		},
 		actionsFilter(item) {
 			return item.transferId == null

@@ -31,6 +31,43 @@
 			</p>
 		</div>
 
+		<div class="cm-settings__setting">
+			<label for="defaultPageSize" class="cm-settings__label">
+				{{ t('charity', 'Default records per page') }}
+			</label>
+			<select id="defaultPageSize"
+				v-model="defaultPageSize"
+				class="cm-settings__select"
+				@change="saveDefaultPageSize">
+				<option v-for="size in [10, 20, 50, 100]" :key="size" :value="size">
+					{{ size }}
+				</option>
+			</select>
+			<p class="cm-settings__hint">
+				{{ t('charity', 'Default number of records shown per page in the record grids') }}
+			</p>
+		</div>
+
+		<div class="cm-settings__setting">
+			<label for="defaultSortOrder" class="cm-settings__label">
+				{{ t('charity', 'Default sort order') }}
+			</label>
+			<select id="defaultSortOrder"
+				v-model="defaultSortOrder"
+				class="cm-settings__select"
+				@change="saveDefaultSortOrder">
+				<option value="newest">
+					{{ t('charity', 'Newest first') }}
+				</option>
+				<option value="oldest">
+					{{ t('charity', 'Oldest first') }}
+				</option>
+			</select>
+			<p class="cm-settings__hint">
+				{{ t('charity', 'Default order used when opening the record grids') }}
+			</p>
+		</div>
+
 		<div v-if="loading" class="cm-view__loading">
 			<NcLoadingIcon :size="32" />
 		</div>
@@ -85,6 +122,8 @@ export default {
 			createTeamForCase: true,
 			groupFolderId: '1',
 			groupFolders: [],
+			defaultPageSize: 20,
+			defaultSortOrder: 'newest',
 			users: [],
 		}
 	},
@@ -103,6 +142,8 @@ export default {
 				const config = await get('/api/v1.0/config')
 				this.createTeamForCase = config.createTeamForCase !== false
 				this.groupFolderId = config.groupFolderId || '1'
+				this.defaultPageSize = config.defaultPageSize || 20
+				this.defaultSortOrder = config.defaultSortOrder || 'newest'
 			} catch (err) {
 				console.error(err)
 			}
@@ -151,6 +192,20 @@ export default {
 		async saveGroupFolderId() {
 			try {
 				await post('/api/v1.0/config/groupFolderId', { value: this.groupFolderId })
+			} catch (err) {
+				console.error(err)
+			}
+		},
+		async saveDefaultPageSize() {
+			try {
+				await post('/api/v1.0/config/defaultPageSize', { value: String(this.defaultPageSize) })
+			} catch (err) {
+				console.error(err)
+			}
+		},
+		async saveDefaultSortOrder() {
+			try {
+				await post('/api/v1.0/config/defaultSortOrder', { value: this.defaultSortOrder })
 			} catch (err) {
 				console.error(err)
 			}
