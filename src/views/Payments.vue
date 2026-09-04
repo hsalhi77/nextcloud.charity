@@ -12,6 +12,12 @@
 				<NcButton type="secondary" @click="filtersVisible = !filtersVisible">
 					{{ t('charity', 'Filters') }}
 				</NcButton>
+				<NcButton type="secondary" @click="exportPayments">
+					<template #icon>
+						<DownloadIcon :size="16" />
+					</template>
+					{{ t('charity', 'Export to Excel') }}
+				</NcButton>
 			</div>
 		</header>
 
@@ -79,6 +85,8 @@ import { useUiStore } from '../stores/ui.js'
 import { useUserStore } from '../stores/user.js'
 import { post } from '../services/api.js'
 import { translate as t } from '@nextcloud/l10n'
+import { exportToCsv } from '../utils/export.js'
+import DownloadIcon from 'vue-material-design-icons/Download.vue'
 
 export default {
 	name: 'Payments',
@@ -86,6 +94,7 @@ export default {
 		NcButton,
 		NcLoadingIcon,
 		PlusIcon,
+		DownloadIcon,
 		EntityTable,
 		EntityFilter,
 	},
@@ -202,6 +211,16 @@ export default {
 		formatAmount(amount) {
 			return (parseFloat(amount) || 0).toFixed(2)
 		},
+		exportPayments() {
+			const negativeTypes = ['Payment', 'Expense Payment', 'Transfer Payment']
+			const exportItems = this.paymentsStore.items.map(item => ({
+				...item,
+				paymentAmount: negativeTypes.includes(item.paymentType)
+					? -(parseFloat(item.paymentAmount) || 0)
+					: (parseFloat(item.paymentAmount) || 0),
+			}))
+			exportToCsv('payments.csv', this.columns, exportItems)
+		},
 		applyFilters(filters) {
 			this.filters = filters
 			this.paymentsStore.fetchAll(filters)
@@ -288,12 +307,16 @@ export default {
 }
 
 .cm-payments-footer {
+    position: sticky;
+    bottom: 0;
     display: flex;
     justify-content: flex-end;
     gap: 24px;
     padding: 16px 0;
     border-top: 1px solid var(--color-border);
     margin-top: 8px;
+    background: var(--color-main-background);
+    z-index: 10;
 }
 
 .cm-payments-footer__row {

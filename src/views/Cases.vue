@@ -12,6 +12,12 @@
 				<NcButton type="secondary" @click="filtersVisible = !filtersVisible">
 					{{ t('charity', 'Filters') }}
 				</NcButton>
+				<NcButton type="secondary" @click="exportCases">
+					<template #icon>
+						<DownloadIcon :size="16" />
+					</template>
+					{{ t('charity', 'Export to Excel') }}
+				</NcButton>
 			</div>
 		</header>
 
@@ -50,6 +56,8 @@ import { usePrefsStore } from '../stores/prefs.js'
 import { useUiStore } from '../stores/ui.js'
 import { useUserStore } from '../stores/user.js'
 import { translate as t } from '@nextcloud/l10n'
+import { exportToCsv } from '../utils/export.js'
+import DownloadIcon from 'vue-material-design-icons/Download.vue'
 
 export default {
 	name: 'Cases',
@@ -57,6 +65,7 @@ export default {
 		NcButton,
 		NcLoadingIcon,
 		PlusIcon,
+		DownloadIcon,
 		EntityTable,
 		EntityFilter,
 	},
@@ -139,6 +148,9 @@ export default {
 		formatDate(date) {
 			if (!date) return ''
 			return new Date(date).toLocaleDateString()
+		},
+		exportCases() {
+			exportToCsv('cases.csv', this.columns, this.casesStore.items)
 		},
 		formatCaseType(id) {
 			const type = this.caseTypesStore.byId(id)
