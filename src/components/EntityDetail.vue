@@ -195,6 +195,7 @@ import { useUiStore } from '../stores/ui.js'
 import { translate as t } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
 import Download from 'vue-material-design-icons/Download.vue'
+import { formatDate as formatDateUtil } from '../utils/date.js'
 import ChevronRight from 'vue-material-design-icons/ChevronRight.vue'
 
 export default {
@@ -483,8 +484,7 @@ export default {
 			return value ?? ''
 		},
 		formatDate(date) {
-			if (!date) return ''
-			return new Date(date).toLocaleDateString()
+			return formatDateUtil(date)
 		},
 		formatCaseType(id) {
 			const type = this.stores.cc_CaseType?.byId(id)

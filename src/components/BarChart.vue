@@ -12,7 +12,7 @@
 							:key="user.uid"
 							class="cm-bar-chart__user-bar"
 							:title="userTooltip(user)">
-							<template v-for="series in seriesConfig" :key="series.key">
+							<template v-for="series in series" :key="series.key">
 								<div
 									v-if="user[series.key] > 0"
 									class="cm-bar-chart__segment"
@@ -40,7 +40,7 @@
 			</div>
 		</div>
 		<div class="cm-bar-chart__legend">
-			<span v-for="series in seriesConfig" :key="series.key" class="cm-bar-chart__legend-item">
+			<span v-for="series in series" :key="series.key" class="cm-bar-chart__legend-item">
 				<span class="cm-bar-chart__legend-dot" :style="{ backgroundColor: series.color }"></span>
 				{{ series.label }}
 			</span>
@@ -56,22 +56,21 @@ export default {
 			type: Array,
 			required: true,
 		},
-	},
-	data() {
-		return {
-			seriesConfig: [
+		series: {
+			type: Array,
+			default: () => [
 				{ key: 'cases', label: t('charity', 'Cases'), color: 'var(--color-primary)' },
 				{ key: 'payments', label: t('charity', 'Payments'), color: 'var(--color-success)' },
 				{ key: 'updates', label: t('charity', 'Updates'), color: 'var(--color-warning)' },
 			],
-		}
+		},
 	},
 	computed: {
 		maxValue() {
 			let max = 0
 			for (const month of this.data) {
 				for (const user of month.users) {
-					const total = user.cases + user.payments + user.updates
+					const total = this.series.reduce((sum, s) => sum + (user[s.key] || 0), 0)
 					if (total > max) {
 						max = total
 					}
@@ -104,7 +103,7 @@ export default {
 			return `${user.displayName} – ${series.label}: ${user[series.key]}`
 		},
 		userTooltip(user) {
-			const total = user.cases + user.payments + user.updates
+			const total = this.series.reduce((sum, s) => sum + (user[s.key] || 0), 0)
 			return `${user.displayName} – ${t('charity', 'Total')}: ${total}`
 		},
 		initials(name) {

@@ -87,6 +87,7 @@ import { post } from '../services/api.js'
 import { translate as t } from '@nextcloud/l10n'
 import { exportToCsv } from '../utils/export.js'
 import DownloadIcon from 'vue-material-design-icons/Download.vue'
+import { formatDate } from '../utils/date.js'
 
 export default {
 	name: 'Payments',
@@ -230,8 +231,7 @@ export default {
 			this.paymentsStore.fetchAll()
 		},
 		formatDate(date) {
-			if (!date) return ''
-			return new Date(date).toLocaleDateString()
+			return formatDate(date)
 		},
 		formatId(id) {
 			if (id == null) return ''

@@ -15,9 +15,23 @@
 		<div v-else class="cm-dashboard__grid">
 			<div class="cm-dashboard__card cm-dashboard__card--wide">
 				<h2>{{ t('charity', 'Activity by Charity Field') }}</h2>
-				<BarChart v-if="stats.activityByField && stats.activityByField.length" :data="stats.activityByField" />
+				<BarChart
+					v-if="stats.activityByField && stats.activityByField.length"
+					:data="stats.activityByField"
+					:series="activitySeries" />
 				<div v-else class="cm-dashboard__empty">
 					{{ t('charity', 'No activity in the last 6 months') }}
+				</div>
+			</div>
+
+			<div class="cm-dashboard__card cm-dashboard__card--wide">
+				<h2>{{ t('charity', 'Payments by Agent and Case Type') }}</h2>
+				<BarChart
+					v-if="paymentChartData.length"
+					:data="paymentChartData"
+					:series="paymentChartSeries" />
+				<div v-else class="cm-dashboard__empty">
+					{{ t('charity', 'No payments in the last 6 months') }}
 				</div>
 			</div>
 
@@ -98,12 +112,66 @@ export default {
 				totalTransferReceipts: 0,
 				payoutRatio: 0,
 				cityStats: [],
+				paymentsByAgentAndCaseType: [],
 			},
 		}
 	},
 	computed: {
 		nonZeroCasesByType() {
 			return (this.stats.casesByType || []).filter(type => type.count > 0)
+		},
+		activitySeries() {
+			return [
+				{ key: 'cases', label: t('charity', 'Cases'), color: 'var(--color-primary)' },
+				{ key: 'payments', label: t('charity', 'Payments'), color: 'var(--color-success)' },
+				{ key: 'updates', label: t('charity', 'Updates'), color: 'var(--color-warning)' },
+			]
+		},
+		paymentsByAgentAndCaseType() {
+			return (this.stats.paymentsByAgentAndCaseType || []).map((row, index) => ({
+				...row,
+				key: `${row.month}-${row.agentUid}-${row.caseType}-${index}`,
+			}))
+		},
+		paymentChartSeries() {
+			const rows = this.stats.paymentsByAgentAndCaseType || []
+			const types = [...new Set(rows.map(r => r.caseType))]
+			const colorMap = {
+				'Project': 'var(--color-primary)',
+				'Medical': 'var(--color-success)',
+				'Educational': 'var(--color-warning)',
+			}
+			const fallbackColors = ['#e15759', '#76b7b2', '#59a14f', '#edc948', '#b07aa1', '#ff9da7', '#9c755f']
+			return types.map((type, index) => ({
+				key: type,
+				label: type,
+				color: colorMap[type] || fallbackColors[index % fallbackColors.length],
+			}))
+		},
+		paymentChartData() {
+			const rows = this.stats.paymentsByAgentAndCaseType || []
+			if (!rows.length) {
+				return []
+			}
+			const months = {}
+			rows.forEach(row => {
+				if (!months[row.month]) {
+					months[row.month] = { month: row.monthLabel, users: {} }
+				}
+				if (!months[row.month].users[row.agentUid]) {
+					months[row.month].users[row.agentUid] = {
+						uid: row.agentUid,
+						displayName: row.agentName,
+					}
+				}
+				months[row.month].users[row.agentUid][row.caseType] = row.totalAmount
+			})
+			return Object.keys(months)
+				.sort()
+				.map(ym => ({
+					month: months[ym].month,
+					users: Object.values(months[ym].users),
+				}))
 		},
 	},
 	async mounted() {

@@ -58,6 +58,7 @@ import { useUserStore } from '../stores/user.js'
 import { translate as t } from '@nextcloud/l10n'
 import { exportToCsv } from '../utils/export.js'
 import DownloadIcon from 'vue-material-design-icons/Download.vue'
+import { formatDate } from '../utils/date.js'
 
 export default {
 	name: 'Updates',
@@ -156,8 +157,7 @@ export default {
 			return String(id).padStart(10, '0')
 		},
 		formatDate(date) {
-			if (!date) return ''
-			return new Date(date).toLocaleDateString()
+			return formatDate(date)
 		},
 		exportUpdates() {
 			exportToCsv('updates.csv', this.columns, this.updatesStore.items)

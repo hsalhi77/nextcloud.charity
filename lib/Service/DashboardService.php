@@ -28,6 +28,7 @@ class DashboardService {
 			'totalTransferReceipts' => $this->getPaymentTotal('Transfer Receipt'),
 			'cityStats' => $this->getCityStats(),
 			'activityByField' => $this->getActivityByField(),
+			'paymentsByAgentAndCaseType' => $this->getPaymentsByAgentAndCaseType(),
 		];
 	}
 
@@ -104,6 +105,41 @@ class DashboardService {
 				'paidAmount' => (float)$row['paid_amount'],
 			];
 		}, $rows);
+	}
+
+	private function getPaymentsByAgentAndCaseType(): array {
+		[$startDate, $endDate] = $this->getActivityWindow();
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('payment.payment_date', 'payment.paid_by', 'case_type.title')
+			->selectAlias($qb->func()->sum('payment.payment_amount'), 'total_amount')
+			->from('cc_payment', 'payment')
+			->innerJoin('payment', 'cc_case', 'case', $qb->expr()->eq('payment.case_id', 'case.id'))
+			->innerJoin('case', 'cc_case_type', 'case_type', $qb->expr()->eq('case.case_type_id', 'case_type.id'))
+			->where($qb->expr()->eq('payment.payment_type', $qb->createNamedParameter('Payment')))
+			->andWhere($qb->expr()->gte('payment.payment_date', $qb->createNamedParameter($startDate)))
+			->andWhere($qb->expr()->lte('payment.payment_date', $qb->createNamedParameter($endDate)))
+			->groupBy('payment.payment_date', 'payment.paid_by', 'case_type.title')
+			->orderBy('payment.payment_date', 'DESC')
+			->addOrderBy('case_type.title', 'ASC')
+			->addOrderBy('payment.paid_by', 'ASC');
+		$result = $qb->executeQuery();
+		$rows = $result->fetchAll();
+		$result->closeCursor();
+
+		$data = [];
+		foreach ($rows as $row) {
+			$ym = (new \DateTime($row['payment_date']))->format('Y-m');
+			$user = $this->userManager->get($row['paid_by']);
+			$data[] = [
+				'month' => $ym,
+				'monthLabel' => (new \DateTime($row['payment_date']))->format('M-y'),
+				'agentUid' => $row['paid_by'],
+				'agentName' => $user ? $user->getDisplayName() : $row['paid_by'],
+				'caseType' => $row['title'],
+				'totalAmount' => (float)$row['total_amount'],
+			];
+		}
+		return $data;
 	}
 
 	private function getActivityWindow(): array {

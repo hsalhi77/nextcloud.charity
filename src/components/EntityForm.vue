@@ -16,7 +16,8 @@
 				:type="field.type"
 				:required="field.required"
 				:label="field.label"
-				:show-trailing-button="false" />
+				:show-trailing-button="false"
+				:max="field.type === 'date' ? todayInputValue() : null" />
 
 			<NcTextArea
 				v-else-if="field.type === 'textarea'"
@@ -44,6 +45,7 @@ import { useUiStore } from '../stores/ui.js'
 import { useCasesStore, usePaymentsStore, useUpdatesStore, useCitiesStore, useCaseTypesStore, useUpdateTypesStore, useTransfersStore } from '../stores/entities.js'
 import { post } from '../services/api.js'
 import { translate as t } from '@nextcloud/l10n'
+import { isValidDate, formatDateForInput, todayInputValue } from '../utils/date.js'
 
 export default {
 	name: 'EntityForm',
@@ -164,13 +166,15 @@ export default {
 			immediate: true,
 			handler(entity) {
 				this.form = entity ? { ...entity } : {}
-			this.fields.forEach(field => {
-				if (this.form[field.key] === undefined) {
-					// Textareas should default to an empty string so v-model/bindings
-					// always treat them as a controlled string input.
-					this.$set(this.form, field.key, field.type === 'textarea' ? '' : null)
-				}
-			})
+				this.fields.forEach(field => {
+					if (this.form[field.key] === undefined) {
+						// Textareas should default to an empty string so v-model/bindings
+						// always treat them as a controlled string input.
+						this.$set(this.form, field.key, field.type === 'textarea' ? '' : null)
+					} else if (field.type === 'date' && this.form[field.key]) {
+						this.$set(this.form, field.key, formatDateForInput(this.form[field.key]))
+					}
+				})
 			},
 		},
 		'form.caseId'(newVal, oldVal) {
@@ -180,6 +184,9 @@ export default {
 		},
 	},
 	methods: {
+		todayInputValue() {
+			return todayInputValue()
+		},
 		async loadReferenceStores() {
 			const needed = {
 				cc_Case: ['cc_CaseType', 'cc_City'],
@@ -207,6 +214,18 @@ export default {
 		},
 		async submit() {
 			const payload = { ...this.form }
+			const dateFields = this.fields.filter(f => f.type === 'date')
+			for (const field of dateFields) {
+				const value = payload[field.key]
+				if (!value && field.required) {
+					alert(t('charity', '{field} is required', { field: field.label }))
+					return
+				}
+				if (value && !isValidDate(value)) {
+					alert(t('charity', '{field} is not a valid date', { field: field.label }))
+					return
+				}
+			}
 			try {
 				if (this.mode === 'add') {
 					await this.store.create(payload)
