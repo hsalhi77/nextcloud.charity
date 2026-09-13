@@ -10,14 +10,24 @@
 			</label>
 
 			<NcTextField
-				v-if="field.type === 'text' || field.type === 'number' || field.type === 'date'"
+				v-if="field.type === 'text' || field.type === 'number'"
 				:id="`field-${field.key}`"
 				v-model="form[field.key]"
 				:type="field.type"
 				:required="field.required"
 				:label="field.label"
-				:show-trailing-button="false"
-				:max="field.type === 'date' ? todayInputValue() : null" />
+				:show-trailing-button="false" />
+
+			<NcDateTimePicker
+				v-else-if="field.type === 'date'"
+				:id="`field-${field.key}`"
+				v-model="form[field.key]"
+				:type="'date'"
+				:format="dateFormat"
+				value-type="YYYY-MM-DD"
+				:append-to-body="true"
+				:required="field.required"
+				:label="field.label" />
 
 			<NcTextArea
 				v-else-if="field.type === 'textarea'"
@@ -40,12 +50,12 @@
 </template>
 
 <script>
-import { NcTextField, NcTextArea, NcSelect, NcLoadingIcon } from '@nextcloud/vue'
+import { NcTextField, NcTextArea, NcSelect, NcLoadingIcon, NcDateTimePicker } from '@nextcloud/vue'
 import { useUiStore } from '../stores/ui.js'
 import { useCasesStore, usePaymentsStore, useUpdatesStore, useCitiesStore, useCaseTypesStore, useUpdateTypesStore, useTransfersStore } from '../stores/entities.js'
 import { post } from '../services/api.js'
 import { translate as t } from '@nextcloud/l10n'
-import { isValidDate, formatDateForInput, todayInputValue } from '../utils/date.js'
+import { isValidDate, getDateFormatForLocale } from '../utils/date.js'
 
 export default {
 	name: 'EntityForm',
@@ -54,6 +64,7 @@ export default {
 		NcTextArea,
 		NcSelect,
 		NcLoadingIcon,
+		NcDateTimePicker,
 	},
 	props: {
 		mode: { type: String, required: true },
@@ -86,6 +97,9 @@ export default {
 		}
 	},
 	computed: {
+		dateFormat() {
+			return getDateFormatForLocale()
+		},
 		store() {
 			return this.stores[this.entityType]
 		},
@@ -171,9 +185,7 @@ export default {
 						// Textareas should default to an empty string so v-model/bindings
 						// always treat them as a controlled string input.
 						this.$set(this.form, field.key, field.type === 'textarea' ? '' : null)
-					} else if (field.type === 'date' && this.form[field.key]) {
-						this.$set(this.form, field.key, formatDateForInput(this.form[field.key]))
-					}
+				}
 				})
 			},
 		},
@@ -184,9 +196,6 @@ export default {
 		},
 	},
 	methods: {
-		todayInputValue() {
-			return todayInputValue()
-		},
 		async loadReferenceStores() {
 			const needed = {
 				cc_Case: ['cc_CaseType', 'cc_City'],
