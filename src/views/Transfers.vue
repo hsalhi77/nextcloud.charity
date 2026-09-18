@@ -38,6 +38,7 @@
 			:default-sort="prefs.sortFor('Transfers')"
 			:page-size-options="[10, 20, 50, 100]"
 			:empty-text="t('charity', 'No transfers found')"
+			@row-click="openDetailPanel"
 			@action="onAction"
 			@page-size-change="prefs.setRecordsPerPage"
 			@sort-change="onSortChange" />
@@ -103,7 +104,9 @@ export default {
 			]
 		},
 		actions() {
-			const base = []
+			const base = [
+				{ name: 'edit', label: t('charity', 'Edit'), icon: 'icon-edit' },
+			]
 			if (this.userStore.isAdminOrCharityAdmin) {
 				base.push({ name: 'delete', label: t('charity', 'Delete'), icon: 'icon-delete' })
 			}
@@ -158,7 +161,14 @@ export default {
 		openAddPanel() {
 			this.ui.openSlidePanel({ mode: 'add', entityType: 'cc_Transfer' })
 		},
+		openDetailPanel(item) {
+			this.ui.openSlidePanel({ mode: 'detail', entityType: 'cc_Transfer', entityId: item.id })
+		},
+		openEditPanel(item) {
+			this.ui.openSlidePanel({ mode: 'edit', entityType: 'cc_Transfer', entity: item })
+		},
 		onAction({ name, item }) {
+			if (name === 'edit') this.openEditPanel(item)
 			if (name === 'delete') this.deleteTransfer(item)
 		},
 		onSortChange(sort) {

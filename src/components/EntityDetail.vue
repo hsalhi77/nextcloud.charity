@@ -90,31 +90,6 @@
 				<div class="cm-entity-detail__attachments-top">
 					<h3>{{ t('charity', 'Attachments') }}</h3>
 
-					<div v-if="attachmentsStore.loading" class="cm-entity-detail__loading">
-						<NcLoadingIcon :size="24" />
-					</div>
-
-					<div v-else-if="attachments.length" class="cm-entity-detail__attachment-list">
-						<div v-for="att in attachments"
-							:key="att.id"
-							class="cm-entity-detail__attachment-row"
-							:class="{ 'cm-entity-detail__attachment-row--selected': att.id === selectedAttachmentId }"
-							:data-attachment-id="att.id"
-							@click="selectAttachment(att)">
-							<ChevronRight :size="18" class="cm-entity-detail__attachment-arrow" />
-							<span class="cm-entity-detail__attachment-name">{{ att.data || att.name }}</span>
-							<span v-if="att.tag" class="cm-entity-detail__attachment-tag">{{ att.tag }}</span>
-							<span class="cm-entity-detail__attachment-size">{{ formatFileSize(att.size) }}</span>
-							<button class="cm-entity-detail__attachment-delete" :title="t('charity', 'Delete')" @click.stop="deleteAttachment(att)">
-								&times;
-							</button>
-						</div>
-					</div>
-
-					<div v-else class="cm-entity-detail__coming-soon">
-						{{ t('charity', 'No attachments yet') }}
-					</div>
-
 					<div class="cm-entity-detail__attachment-upload">
 						<div class="cm-entity-detail__upload-tag">
 							<NcTextField v-model="uploadTag" :label="t('charity', 'Tag')" :show-trailing-button="false" />
@@ -130,6 +105,33 @@
 							type="file"
 							class="hidden"
 							@change="onFileSelected">
+					</div>
+
+					<div class="cm-entity-detail__attachment-list-container">
+						<div v-if="attachmentsStore.loading" class="cm-entity-detail__loading">
+							<NcLoadingIcon :size="24" />
+						</div>
+
+						<div v-else-if="attachments.length" class="cm-entity-detail__attachment-list">
+							<div v-for="att in attachments"
+								:key="att.id"
+								class="cm-entity-detail__attachment-row"
+								:class="{ 'cm-entity-detail__attachment-row--selected': att.id === selectedAttachmentId }"
+								:data-attachment-id="att.id"
+								@click="selectAttachment(att)">
+								<ChevronRight :size="18" class="cm-entity-detail__attachment-arrow" />
+								<span class="cm-entity-detail__attachment-name">{{ att.data || att.name }}</span>
+								<span v-if="att.tag" class="cm-entity-detail__attachment-tag">{{ att.tag }}</span>
+								<span class="cm-entity-detail__attachment-size">{{ formatFileSize(att.size) }}</span>
+								<button class="cm-entity-detail__attachment-delete" :title="t('charity', 'Delete')" @click.stop="deleteAttachment(att)">
+									&times;
+								</button>
+							</div>
+						</div>
+
+						<div v-else class="cm-entity-detail__coming-soon">
+							{{ t('charity', 'No attachments yet') }}
+						</div>
 					</div>
 				</div>
 
@@ -190,8 +192,9 @@
 
 <script>
 import { NcLoadingIcon, NcButton, NcTextField } from '@nextcloud/vue'
-import { useCasesStore, usePaymentsStore, useUpdatesStore, useCaseTypesStore, useUpdateTypesStore, useCitiesStore, useAttachmentsStore } from '../stores/entities.js'
+import { useCasesStore, usePaymentsStore, useUpdatesStore, useTransfersStore, useCaseTypesStore, useUpdateTypesStore, useCitiesStore, useAttachmentsStore } from '../stores/entities.js'
 import { useUiStore } from '../stores/ui.js'
+import { post } from '../services/api.js'
 import { translate as t } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
 import Download from 'vue-material-design-icons/Download.vue'
@@ -216,6 +219,7 @@ export default {
 			cc_Case: useCasesStore(),
 			cc_Payment: usePaymentsStore(),
 			cc_Update: useUpdatesStore(),
+			cc_Transfer: useTransfersStore(),
 			cc_City: useCitiesStore(),
 			cc_CaseType: useCaseTypesStore(),
 			cc_UpdateType: useUpdateTypesStore(),
@@ -240,6 +244,7 @@ export default {
 			uploadTag: '',
 			selectedAttachmentId: null,
 			previewImageError: false,
+			users: [],
 		}
 	},
 	computed: {
@@ -318,6 +323,15 @@ export default {
 					{ key: 'updateBy', label: t('charity', 'Updated By') },
 					{ key: 'description', label: t('charity', 'Description') },
 				]
+			case 'cc_Transfer':
+				return [
+					{ key: 'transferDate', label: t('charity', 'Transfer Date'), formatter: this.formatDate },
+					{ key: 'ref', label: t('charity', 'Reference') },
+					{ key: 'amount', label: t('charity', 'Amount') },
+					{ key: 'paidFrom', label: t('charity', 'Paid From'), formatter: this.formatUser },
+					{ key: 'paidTo', label: t('charity', 'Paid To'), formatter: this.formatUser },
+					{ key: 'description', label: t('charity', 'Description') },
+				]
 			case 'cc_City':
 				return [
 					{ key: 'title', label: t('charity', 'Title') },
@@ -380,6 +394,9 @@ export default {
 				if (this.entityType === 'cc_Update') {
 					promises.push(this.stores.cc_UpdateType?.fetchAll())
 				}
+				if (this.entityType === 'cc_Transfer') {
+					promises.push(this.loadUsers())
+				}
 				await Promise.all(promises)
 			} finally {
 				this.loading = false
@@ -412,6 +429,15 @@ export default {
 				this.selectFirstAttachment()
 			} catch (e) {
 				console.error('Failed to load attachments', e)
+			}
+		},
+		async loadUsers() {
+			try {
+				const result = await post('/team/usersByGroup', { params: { group: 'Charity Field' } })
+				this.users = result || []
+			} catch (e) {
+				console.error('Failed to load users', e)
+				this.users = []
 			}
 		},
 		selectFirstAttachment() {
@@ -497,6 +523,11 @@ export default {
 		formatCase(id) {
 			if (!id) return ''
 			return String(id).padStart(10, '0')
+		},
+		formatUser(uid) {
+			if (!uid) return ''
+			const user = (this.users || []).find(u => u.uid === uid)
+			return user ? user.displayName : uid
 		},
 		formatUpdateType(id) {
 			const type = this.stores.cc_UpdateType?.byId(id)
@@ -708,11 +739,16 @@ export default {
 	padding: 16px;
 }
 
+.cm-entity-detail__attachment-list-container {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+}
+
 .cm-entity-detail__attachment-list {
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
-	margin-bottom: 16px;
 }
 
 .cm-entity-detail__attachment-row {
@@ -775,7 +811,8 @@ export default {
 }
 
 .cm-entity-detail__attachment-upload {
-	margin-top: 8px;
+	flex-shrink: 0;
+	margin-bottom: 12px;
 }
 
 .cm-entity-detail__upload-tag {

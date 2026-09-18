@@ -9,6 +9,7 @@ use OCA\Charity\Db\cc_attachmentMapper;
 use OCA\Charity\Db\cc_Case;
 use OCA\Charity\Db\cc_CaseMapper;
 use OCA\Charity\Db\cc_PaymentMapper;
+use OCA\Charity\Db\cc_TransferMapper;
 use OCA\Charity\Db\cc_UpdateMapper;
 use OCP\DB\Exception as DBException;
 use OCP\Files\File;
@@ -24,6 +25,7 @@ class AttachmentService {
 	private cc_CaseMapper $caseMapper;
 	private cc_PaymentMapper $paymentMapper;
 	private cc_UpdateMapper $updateMapper;
+	private cc_TransferMapper $transferMapper;
 	private PermissionService $permissionService;
 	private IRootFolder $root;
 	private IConfig $config;
@@ -36,6 +38,7 @@ class AttachmentService {
 		cc_CaseMapper $caseMapper,
 		cc_PaymentMapper $paymentMapper,
 		cc_UpdateMapper $updateMapper,
+		cc_TransferMapper $transferMapper,
 		PermissionService $permissionService,
 		IRootFolder $root,
 		IConfig $config,
@@ -47,6 +50,7 @@ class AttachmentService {
 		$this->caseMapper = $caseMapper;
 		$this->paymentMapper = $paymentMapper;
 		$this->updateMapper = $updateMapper;
+		$this->transferMapper = $transferMapper;
 		$this->permissionService = $permissionService;
 		$this->root = $root;
 		$this->config = $config;
@@ -606,6 +610,8 @@ class AttachmentService {
 				return $this->paymentMapper;
 			case 'cc_Update':
 				return $this->updateMapper;
+			case 'cc_Transfer':
+				return $this->transferMapper;
 		}
 
 		throw new \InvalidArgumentException('Unsupported attachment object type: ' . $objectType);
@@ -650,6 +656,8 @@ class AttachmentService {
 				return 'Payments/' . sprintf('%010d', $objectId);
 			case 'cc_Update':
 				return 'Updates/' . sprintf('%010d', $objectId);
+			case 'cc_Transfer':
+				return 'Transfers/' . sprintf('%010d', $objectId);
 		}
 		return $objectType . '/' . $objectId;
 	}
