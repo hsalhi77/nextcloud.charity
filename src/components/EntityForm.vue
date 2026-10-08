@@ -45,12 +45,19 @@
 				:reduce="field.optionValue ? v => v[field.optionValue] : v => v"
 				:required="field.required"
 				:placeholder="field.label" />
+
+			<NcCheckboxRadioSwitch
+				v-else-if="field.type === 'checkbox'"
+				:id="`field-${field.key}`"
+				:checked.sync="form[field.key]">
+				{{ field.label }}
+			</NcCheckboxRadioSwitch>
 		</div>
 	</form>
 </template>
 
 <script>
-import { NcTextField, NcTextArea, NcSelect, NcLoadingIcon, NcDateTimePicker } from '@nextcloud/vue'
+import { NcTextField, NcTextArea, NcSelect, NcLoadingIcon, NcDateTimePicker, NcCheckboxRadioSwitch } from '@nextcloud/vue'
 import { useUiStore } from '../stores/ui.js'
 import { useCasesStore, usePaymentsStore, useUpdatesStore, useCitiesStore, useCaseTypesStore, useUpdateTypesStore, useTransfersStore } from '../stores/entities.js'
 import { post } from '../services/api.js'
@@ -65,6 +72,7 @@ export default {
 		NcSelect,
 		NcLoadingIcon,
 		NcDateTimePicker,
+		NcCheckboxRadioSwitch,
 	},
 	props: {
 		mode: { type: String, required: true },
@@ -128,9 +136,10 @@ export default {
 					{ key: 'town', label: t('charity', 'Town'), type: 'text' },
 					{ key: 'location', label: t('charity', 'Location'), type: 'text' },
 					{ key: 'dependants', label: t('charity', 'Dependants'), type: 'number' },
-					{ key: 'description', label: t('charity', 'Description'), type: 'textarea' },
-					{ key: 'recommendation', label: t('charity', 'Recommendation'), type: 'textarea' },
-				]
+				{ key: 'description', label: t('charity', 'Description'), type: 'textarea' },
+				{ key: 'recommendation', label: t('charity', 'Recommendation'), type: 'textarea' },
+				{ key: 'monthly', label: t('charity', 'Monthly contribution'), type: 'checkbox' },
+			]
 			case 'cc_Payment':
 				return [
 					{ key: 'caseId', label: t('charity', 'Case'), type: 'select', options: [{ _displayLabel: t('charity', 'None') }, ...(this.stores.cc_Case?.items || []).map(c => ({ ...c, _displayLabel: String(c.id).padStart(10, '0') }))], optionLabel: '_displayLabel', optionValue: 'id' },
@@ -184,8 +193,10 @@ export default {
 					if (this.form[field.key] === undefined) {
 						// Textareas should default to an empty string so v-model/bindings
 						// always treat them as a controlled string input.
-						this.$set(this.form, field.key, field.type === 'textarea' ? '' : null)
-				}
+						if (field.type === 'textarea') this.$set(this.form, field.key, '')
+						else if (field.type === 'checkbox') this.$set(this.form, field.key, false)
+						else this.$set(this.form, field.key, null)
+					}
 				})
 			},
 		},

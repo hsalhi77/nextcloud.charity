@@ -302,9 +302,10 @@ export default {
 					{ key: 'email', label: t('charity', 'Email') },
 					{ key: 'address', label: t('charity', 'Address') },
 					{ key: 'cityId', label: t('charity', 'City'), formatter: this.formatCity },
-					{ key: 'description', label: t('charity', 'Description') },
-					{ key: 'recommendation', label: t('charity', 'Recommendation') },
-				]
+				{ key: 'description', label: t('charity', 'Description') },
+				{ key: 'recommendation', label: t('charity', 'Recommendation') },
+				{ key: 'monthly', label: t('charity', 'Monthly'), formatter: v => v ? t('charity', 'Yes') : t('charity', 'No') },
+			]
 			case 'cc_Payment':
 				return [
 					{ key: 'caseId', label: t('charity', 'Case'), formatter: this.formatCase },

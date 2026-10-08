@@ -107,6 +107,7 @@ class cc_CaseService {
 		$item->setReferredBy($param['referredBy'] ?? $this->userId);
 		$item->setOwner($this->userId);
 		$item->setIsactive(1);
+		$item->setMonthly(!empty($param['monthly']));
 
 		$config = \OC::$server->get(\OCP\IConfig::class);
 		$createTeam = $config->getAppValue('charity', 'createTeamForCase', '1');
@@ -149,6 +150,7 @@ class cc_CaseService {
 		if (isset($param['description'])) $item->setDescription($param['description']);
 		if (isset($param['recommendation'])) $item->setRecommendation($param['recommendation']);
 		if (isset($param['referredBy'])) $item->setReferredBy($param['referredBy']);
+		if (isset($param['monthly'])) $item->setMonthly(filter_var($param['monthly'], FILTER_VALIDATE_BOOLEAN));
 		$item->setUpdated(new \DateTime());
 		return $this->mapper->update($item);
 	}

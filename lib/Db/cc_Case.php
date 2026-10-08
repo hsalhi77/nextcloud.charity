@@ -21,6 +21,7 @@ class cc_Case extends RelationalEntity {
     protected $created;
     protected $updated;
     protected $isactive;
+    protected $monthly;
     protected $acl = [];
     protected $permissions = [];
 
@@ -36,6 +37,7 @@ class cc_Case extends RelationalEntity {
         $this->addType('created', 'datetime');
         $this->addType('updated', 'datetime');
         $this->addType('isactive', 'boolean');
+        $this->addType('monthly', 'boolean');
         $this->addRelation('acl');
         $this->addRelation('permissions');
         $this->addResolvable('owner');
