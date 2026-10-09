@@ -77,6 +77,7 @@ class PermissionService {
 		IManager $shareManager,
 		IConfig $config,
 		TeamService $teamService,
+		\OCP\App\IAppManager $appManager,
 		$userId
 	) {
 		$this->aclMapper = $aclMapper;
@@ -89,8 +90,8 @@ class PermissionService {
 		$this->teamService = $teamService;
 		$this->userId = $userId;
 
-		$this->circlesEnabled = \OC::$server->getAppManager()->isEnabledForUser('circles') &&
-			(version_compare(\OC::$server->getAppManager()->getAppVersion('circles'), '0.17.1') >= 0);
+		$this->circlesEnabled = $appManager->isEnabledForUser('circles') &&
+			(version_compare($appManager->getAppVersion('circles'), '0.17.1') >= 0);
 	}
 
 	/**

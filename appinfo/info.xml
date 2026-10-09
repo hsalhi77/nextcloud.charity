@@ -17,7 +17,7 @@
         <database min-version="9.4">pgsql</database>
         <database>sqlite</database>
         <database min-version="5.5">mysql</database>
-        <nextcloud min-version="25" max-version="32"/>
+        <nextcloud min-version="25" max-version="34"/>
     </dependencies>
     <navigations>
         <navigation>
