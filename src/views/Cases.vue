@@ -21,8 +21,7 @@
 			</div>
 		</header>
 
-		<EntityFilter
-			v-if="filtersVisible"
+		<EntityFilter v-if="filtersVisible"
 			:fields="filterFields"
 			@filter="applyFilters"
 			@clear="clearFilters" />
@@ -31,8 +30,7 @@
 			<NcLoadingIcon :size="32" />
 		</div>
 
-		<EntityTable v-else
-			:columns="columns"
+		<EntityTable :columns="columns"
 			:items="casesStore.items"
 			:actions="actions"
 			:page-size="prefs.pageSize"
@@ -99,10 +97,10 @@ export default {
 				{ key: 'name', label: t('charity', 'Name'), type: 'text' },
 				{ key: 'cityId', label: t('charity', 'City'), type: 'select', options: this.citiesStore.items, optionLabel: 'title', optionValue: 'id' },
 				{ key: 'caseTypeId', label: t('charity', 'Case Type'), type: 'select', options: this.caseTypesStore.items, optionLabel: 'title', optionValue: 'id' },
-			{ key: 'owner', label: t('charity', 'Owner'), type: 'text' },
-			{ key: 'referredBy', label: t('charity', 'Referred By'), type: 'text' },
-			{ key: 'monthly', label: t('charity', 'Monthly'), type: 'select', options: [{ label: t('charity', 'Yes'), value: 1 }, { label: t('charity', 'No'), value: 0 }], optionLabel: 'label', optionValue: 'value' },
-		]
+				{ key: 'owner', label: t('charity', 'Owner'), type: 'text' },
+				{ key: 'referredBy', label: t('charity', 'Referred By'), type: 'text' },
+				{ key: 'monthly', label: t('charity', 'Monthly'), type: 'select', options: [{ label: t('charity', 'Yes'), value: 1 }, { label: t('charity', 'No'), value: 0 }], optionLabel: 'label', optionValue: 'value' },
+			]
 		},
 		actions() {
 			const base = [

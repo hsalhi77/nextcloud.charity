@@ -8,6 +8,7 @@ const routes = [
 	{ path: '/dashboard', name: 'dashboard', component: () => import('../views/Dashboard.vue') },
 	{ path: '/cases', name: 'cases', component: () => import('../views/Cases.vue') },
 	{ path: '/payments', name: 'payments', component: () => import('../views/Payments.vue') },
+	{ path: '/assets', name: 'assets', component: () => import('../views/Assets.vue') },
 	{ path: '/updates', name: 'updates', component: () => import('../views/Updates.vue') },
 	{ path: '/settings', name: 'settings', component: () => import('../views/Settings.vue') },
 	{ path: '/city', name: 'city', component: () => import('../views/City.vue') },

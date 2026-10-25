@@ -5,20 +5,32 @@ use OCA\Charity\Db\cc_Payment;
 use OCA\Charity\Db\cc_PaymentMapper;
 use OCA\Charity\Exceptions\NoPermissionException;
 use OCP\AppFramework\Db\DoesNotExistException;
+use OCP\DB\Exception as DBException;
+use OCP\IDBConnection;
 
 class cc_PaymentService {
 	private const TRANSFER_TYPES = ['Transfer Payment', 'Transfer Receipt'];
+	private const ASSET_TYPE = 'Asset Purchase';
 
 	private $mapper;
 	private AttachmentService $attachmentService;
 	private TeamService $teamService;
+	private cc_AssetService $assetService;
+	private IDBConnection $db;
 	private ?string $userId;
 
-	public function __construct(cc_PaymentMapper $mapper, AttachmentService $attachmentService, TeamService $teamService, $userId) {
+	public function __construct(cc_PaymentMapper $mapper,
+	                            AttachmentService $attachmentService,
+	                            TeamService $teamService,
+	                            cc_AssetService $assetService,
+	                            IDBConnection $db,
+	                            $userId) {
 		$this->mapper = $mapper;
 		$this->attachmentService = $attachmentService;
 		$this->teamService = $teamService;
+		$this->assetService = $assetService;
 		$this->userId = $userId;
+		$this->db = $db;
 	}
 
 	public function findAll($param = []) {
@@ -30,6 +42,7 @@ class cc_PaymentService {
 		if ($item === null) {
 			throw new DoesNotExistException('Payment not found');
 		}
+		$this->loadAssets($item);
 		return $item;
 	}
 
@@ -49,23 +62,7 @@ class cc_PaymentService {
 		}
 	}
 
-	public function create($param) {
-		$item = new cc_Payment();
-		$item->setCaseId($param['caseId'] ?? null);
-		$item->setPaymentDate(isset($param['paymentDate']) ? new \DateTime($param['paymentDate']) : new \DateTime());
-		$item->setPaymentReceipt($param['paymentReceipt'] ?? '');
-		$item->setPaidBy($param['paidBy'] ?? '');
-		$item->setPaymentType($param['paymentType'] ?? '');
-		$this->assertManualPaymentType($param['paymentType'] ?? '');
-		$item->setPaymentAmount($param['paymentAmount'] ?? 0);
-		$item->setPaymentReference($param['paymentReference'] ?? '');
-		$item->setDescription($param['description'] ?? '');
-		return $this->mapper->insert($item);
-	}
-
-	public function update($param, $id) {
-		$item = $this->find($id);
-		$this->assertNotTransferLinked($item);
+	private function buildPaymentFromParams(cc_Payment $item, array $param): void {
 		if (isset($param['caseId'])) $item->setCaseId($param['caseId']);
 		if (isset($param['paymentDate'])) $item->setPaymentDate(new \DateTime($param['paymentDate']));
 		if (isset($param['paymentReceipt'])) $item->setPaymentReceipt($param['paymentReceipt']);
@@ -77,17 +74,52 @@ class cc_PaymentService {
 		if (isset($param['paymentAmount'])) $item->setPaymentAmount($param['paymentAmount']);
 		if (isset($param['paymentReference'])) $item->setPaymentReference($param['paymentReference']);
 		if (array_key_exists('description', $param)) $item->setDescription($param['description']);
-		return $this->mapper->update($item);
+	}
+
+	private function inTransaction(callable $fn) {
+		$this->db->beginTransaction();
+		try {
+			$result = $fn();
+			$this->db->commit();
+			return $result;
+		} catch (\Throwable $e) {
+			$this->db->rollBack();
+			throw $e;
+		}
+	}
+
+	private function loadAssets(cc_Payment $payment): void {
+		$this->assetService->loadAssetsForPayment($payment);
+	}
+
+	public function create($param) {
+		return $this->inTransaction(function () use ($param) {
+			$item = new cc_Payment();
+			$this->buildPaymentFromParams($item, $param);
+			return $this->mapper->insert($item);
+		});
+	}
+
+	public function update($param, $id) {
+		return $this->inTransaction(function () use ($param, $id) {
+			$item = $this->find($id);
+			$this->assertNotTransferLinked($item);
+			$this->buildPaymentFromParams($item, $param);
+			return $this->mapper->update($item);
+		});
 	}
 
 	public function delete($id) {
 		if (!$this->teamService->isAdmin()) {
 			throw new NoPermissionException('Only Admin and Charity Admin users can delete records.');
 		}
-		$item = $this->find($id);
-		$this->assertNotTransferLinked($item);
-		$this->attachmentService->deleteAllForObject($id, 'cc_Payment', $this->userId);
-		$this->attachmentService->deleteObjectFolder($id, 'cc_Payment');
-		return $this->mapper->delete($item);
+		return $this->inTransaction(function () use ($id) {
+			$item = $this->find($id);
+			$this->assertNotTransferLinked($item);
+			$this->assetService->deleteByPayment($item->getId());
+			$this->attachmentService->deleteAllForObject($id, 'cc_Payment', $this->userId);
+			$this->attachmentService->deleteObjectFolder($id, 'cc_Payment');
+			return $this->mapper->delete($item);
+		});
 	}
 }

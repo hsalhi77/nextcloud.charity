@@ -2,34 +2,36 @@
 namespace OCA\Charity\Db;
 
 class cc_Payment extends RelationalEntity {
-    protected $caseId;
-    protected $paymentDate;
-    protected $paymentReceipt;
-    protected $paidBy;
-    protected $paymentType;
-    protected $paymentAmount;
-    protected $paymentReference;
-    protected $description;
-    protected $transferId;
+	protected $caseId;
+	protected $paymentDate;
+	protected $paymentReceipt;
+	protected $paidBy;
+	protected $paymentType;
+	protected $paymentAmount;
+	protected $paymentReference;
+	protected $description;
+	protected $transferId;
+	protected $assets = [];
 
-    public function __construct() {
-        $this->addType('id', 'integer');
-        $this->addType('caseId', 'integer');
-        $this->addType('paymentDate', 'datetime');
-        $this->addType('paymentReceipt', 'string');
-        $this->addType('paidBy', 'string');
-        $this->addType('paymentType', 'string');
-        $this->addType('paymentAmount', 'float');
+	public function __construct() {
+		$this->addType('id', 'integer');
+		$this->addType('caseId', 'integer');
+		$this->addType('paymentDate', 'datetime');
+		$this->addType('paymentReceipt', 'string');
+		$this->addType('paidBy', 'string');
+		$this->addType('paymentType', 'string');
+		$this->addType('paymentAmount', 'float');
 		$this->addType('paymentReference', 'string');
 		$this->addType('description', 'string');
-        $this->addType('transferId', 'integer');
-    }
+		$this->addType('transferId', 'integer');
+		$this->addRelation('assets');
+	}
 
-    public function jsonSerialize() {
-        $json = parent::jsonSerialize();
-        if ($this->paymentDate instanceof \DateTime) {
-            $json['paymentDate'] = $this->paymentDate->format('Y-m-d');
-        }
-        return $json;
-    }
+	public function jsonSerialize() {
+		$json = parent::jsonSerialize();
+		if ($this->paymentDate instanceof \DateTime) {
+			$json['paymentDate'] = $this->paymentDate->format('Y-m-d');
+		}
+		return $json;
+	}
 }

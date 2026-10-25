@@ -1,7 +1,10 @@
 <template>
 	<transition name="slide">
 		<div class="cm-slide-panel-overlay" @click="ui.closeSlidePanel">
-			<aside class="cm-slide-panel" role="dialog" aria-modal="true" @click.stop>
+			<aside class="cm-slide-panel"
+				role="dialog"
+				aria-modal="true"
+				@click.stop>
 				<header class="cm-slide-panel__header">
 					<h2>{{ title }}</h2>
 					<NcButton type="tertiary" :aria-label="t('charity', 'Close panel')" @click="ui.closeSlidePanel">
@@ -11,14 +14,17 @@
 					</NcButton>
 				</header>
 				<div class="cm-slide-panel__content">
-					<EntityForm
-						v-if="ui.slidePanelMode === 'add' || ui.slidePanelMode === 'edit'"
-						ref="entityForm"
+					<AssetForm v-if="isAssetForm"
+						ref="formComponent"
+						:mode="ui.slidePanelMode"
+						:asset="ui.slidePanelEntity"
+						:payment-id="ui.slidePanelEntity?.paymentId || null" />
+					<EntityForm v-else-if="ui.slidePanelMode === 'add' || ui.slidePanelMode === 'edit'"
+						ref="formComponent"
 						:mode="ui.slidePanelMode"
 						:entity-type="ui.slidePanelEntityType"
 						:entity="ui.slidePanelEntity" />
-					<EntityDetail
-						v-else
+					<EntityDetail v-else
 						:entity-type="ui.slidePanelEntityType"
 						:entity-id="ui.slidePanelEntityId" />
 				</div>
@@ -40,6 +46,7 @@ import { NcButton } from '@nextcloud/vue'
 import CloseIcon from 'vue-material-design-icons/Close.vue'
 import EntityForm from './EntityForm.vue'
 import EntityDetail from './EntityDetail.vue'
+import AssetForm from './AssetForm.vue'
 import { useUiStore } from '../stores/ui.js'
 import { translate as t } from '@nextcloud/l10n'
 
@@ -50,6 +57,7 @@ export default {
 		CloseIcon,
 		EntityForm,
 		EntityDetail,
+		AssetForm,
 	},
 	setup() {
 		const ui = useUiStore()
@@ -67,11 +75,14 @@ export default {
 		submitLabel() {
 			return this.ui.slidePanelMode === 'add' ? t('charity', 'Create') : t('charity', 'Save Changes')
 		},
+		isAssetForm() {
+			return this.ui.slidePanelEntityType === 'cc_Asset' && (this.ui.slidePanelMode === 'add' || this.ui.slidePanelMode === 'edit')
+		},
 	},
 	methods: {
 		submitForm() {
-			if (this.$refs.entityForm) {
-				this.$refs.entityForm.submit()
+			if (this.$refs.formComponent) {
+				this.$refs.formComponent.submit()
 			}
 		},
 	},

@@ -17,6 +17,11 @@
 						<CashIcon :size="20" />
 					</template>
 				</NcAppNavigationItem>
+				<NcAppNavigationItem :to="{ name: 'assets' }" :name="t('charity', 'Assets')" :active="isActive('assets')">
+					<template #icon>
+						<ArchiveIcon :size="20" />
+					</template>
+				</NcAppNavigationItem>
 				<NcAppNavigationItem :to="{ name: 'transfers' }" :name="t('charity', 'Internal Transfers')" :active="isActive('transfers')">
 					<template #icon>
 						<SwapHorizontalIcon :size="20" />
@@ -27,22 +32,34 @@
 						<BellIcon :size="20" />
 					</template>
 				</NcAppNavigationItem>
-				<NcAppNavigationItem v-if="userStore.isAdmin" :to="{ name: 'settings' }" :name="t('charity', 'Settings')" :active="isActive('settings')">
+				<NcAppNavigationItem v-if="userStore.isAdmin"
+					:to="{ name: 'settings' }"
+					:name="t('charity', 'Settings')"
+					:active="isActive('settings')">
 					<template #icon>
 						<CogIcon :size="20" />
 					</template>
 				</NcAppNavigationItem>
-				<NcAppNavigationItem v-if="userStore.isAdminOrCharityAdmin" :to="{ name: 'city' }" :name="t('charity', 'City')" :active="isActive('city')">
+				<NcAppNavigationItem v-if="userStore.isAdminOrCharityAdmin"
+					:to="{ name: 'city' }"
+					:name="t('charity', 'City')"
+					:active="isActive('city')">
 					<template #icon>
 						<MapMarkerIcon :size="20" />
 					</template>
 				</NcAppNavigationItem>
-				<NcAppNavigationItem v-if="userStore.isAdmin" :to="{ name: 'casetype' }" :name="t('charity', 'Case Types')" :active="isActive('casetype')">
+				<NcAppNavigationItem v-if="userStore.isAdmin"
+					:to="{ name: 'casetype' }"
+					:name="t('charity', 'Case Types')"
+					:active="isActive('casetype')">
 					<template #icon>
 						<TagIcon :size="20" />
 					</template>
 				</NcAppNavigationItem>
-				<NcAppNavigationItem v-if="userStore.isAdmin" :to="{ name: 'updatetype' }" :name="t('charity', 'Update Types')" :active="isActive('updatetype')">
+				<NcAppNavigationItem v-if="userStore.isAdmin"
+					:to="{ name: 'updatetype' }"
+					:name="t('charity', 'Update Types')"
+					:active="isActive('updatetype')">
 					<template #icon>
 						<ClipboardListIcon :size="20" />
 					</template>
@@ -73,6 +90,7 @@ import CogIcon from 'vue-material-design-icons/Cog.vue'
 import MapMarkerIcon from 'vue-material-design-icons/MapMarker.vue'
 import TagIcon from 'vue-material-design-icons/Tag.vue'
 import ClipboardListIcon from 'vue-material-design-icons/ClipboardList.vue'
+import ArchiveIcon from 'vue-material-design-icons/Archive.vue'
 import SlidePanel from './components/SlidePanel.vue'
 import { useUiStore } from './stores/ui.js'
 import { useUserStore } from './stores/user.js'
@@ -94,6 +112,7 @@ export default {
 		MapMarkerIcon,
 		TagIcon,
 		ClipboardListIcon,
+		ArchiveIcon,
 		SlidePanel,
 	},
 	setup() {

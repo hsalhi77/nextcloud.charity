@@ -1,8 +1,7 @@
 <template>
 	<div class="cm-table">
 		<div class="cm-table__header cm-table__row">
-			<div
-				v-for="column in columns"
+			<div v-for="column in columns"
 				:key="column.key"
 				class="cm-table__cell cm-table__cell--sortable"
 				:style="{ width: column.width || 'auto' }"
@@ -18,8 +17,7 @@
 			<div class="cm-table__cell cm-table__cell--actions" />
 		</div>
 
-		<div
-			v-for="(item, index) in paginatedItems"
+		<div v-for="(item, index) in paginatedItems"
 			:key="item.id || index"
 			class="cm-table__row"
 			:data-row-index="originalIndex(index)"
@@ -28,19 +26,26 @@
 			@click="$emit('row-click', item)"
 			@keydown.enter="$emit('row-click', item)"
 			@keydown.space.prevent="$emit('row-click', item)">
-			<div
-				v-for="column in columns"
+			<div v-for="column in columns"
 				:key="column.key"
 				class="cm-table__cell"
-				:style="{ width: column.width || 'auto' }">
-				<span v-if="column.badge" class="cm-table__badge" :class="badgeClass(item, column)">
-					{{ formatValue(item, column) }}
-				</span>
-				<template v-else>{{ formatValue(item, column) }}</template>
+				:style="{ width: column.width || 'auto' }"
+				@click.stop>
+				<slot :name="`cell-${column.key}`" :item="item" :column="column">
+					<span v-if="column.badge" class="cm-table__badge" :class="badgeClass(item, column)">
+						{{ formatValue(item, column) }}
+					</span>
+					<template v-else>
+						{{ formatValue(item, column) }}
+					</template>
+				</slot>
 			</div>
 			<div class="cm-table__cell cm-table__cell--actions" @click.stop>
 				<div v-if="actions.length" class="cm-table__actions-dropdown">
-					<button ref="triggerBtn" class="cm-table__actions-trigger" @click="toggleMenu(originalIndex(index), $event)" :aria-label="t('charity', 'Actions')">
+					<button ref="triggerBtn"
+						class="cm-table__actions-trigger"
+						:aria-label="t('charity', 'Actions')"
+						@click="toggleMenu(originalIndex(index), $event)">
 						<DotsVerticalIcon :size="18" />
 					</button>
 				</div>
@@ -70,23 +75,27 @@
 				</label>
 			</div>
 			<div class="cm-table__pagination-controls">
-				<button
-					class="cm-table__pagination-btn"
+				<button class="cm-table__pagination-btn"
 					:disabled="currentPage === 1"
 					:aria-label="t('charity', 'Previous page')"
-					@click="goToPage(currentPage - 1)">‹</button>
+					@click="goToPage(currentPage - 1)">
+					‹
+				</button>
 				<span class="cm-table__pagination-page">{{ currentPage }} / {{ totalPages }}</span>
-				<button
-					class="cm-table__pagination-btn"
+				<button class="cm-table__pagination-btn"
 					:disabled="currentPage === totalPages"
 					:aria-label="t('charity', 'Next page')"
-					@click="goToPage(currentPage + 1)">›</button>
+					@click="goToPage(currentPage + 1)">
+					›
+				</button>
 			</div>
 		</div>
 
-		<div v-if="menuVisible" class="cm-table__context-menu" :style="menuStyle" @click.stop>
-			<button
-				v-for="action in menuActions"
+		<div v-if="menuVisible"
+			class="cm-table__context-menu"
+			:style="menuStyle"
+			@click.stop>
+			<button v-for="action in menuActions"
 				:key="action.name"
 				class="cm-table__actions-item"
 				:class="{ 'cm-table__actions-item--disabled': action.disabled }"
@@ -109,7 +118,6 @@ export default {
 		NcEmptyContent,
 		DotsVerticalIcon,
 	},
-	setup() { return { t } },
 	props: {
 		columns: { type: Array, required: true },
 		items: { type: Array, required: true },
@@ -121,6 +129,7 @@ export default {
 		defaultSort: { type: Object, default: null },
 	},
 	emits: ['row-click', 'action', 'page-size-change', 'sort-change'],
+	setup() { return { t } },
 	data() {
 		return {
 			menuVisible: false,
@@ -179,7 +188,7 @@ export default {
 	},
 	methods: {
 		sortValue(item, column) {
-			let value = column.keyPath
+			const value = column.keyPath
 				? column.keyPath.split('.').reduce((obj, key) => obj?.[key], item)
 				: item[column.key]
 			if (value === null || value === undefined) return ''

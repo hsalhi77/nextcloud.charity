@@ -163,6 +163,71 @@
 				</div>
 			</div>
 
+			<!-- ASSETS -->
+			<div v-else-if="activeTab === 'assets'" class="cm-entity-detail__assets">
+				<div class="cm-entity-detail__assets-header">
+					<h3>{{ t('charity', 'Assets') }}</h3>
+					<NcButton v-if="entityType === 'cc_Payment'" type="secondary" @click="openAddAsset">
+						{{ t('charity', 'Add Asset') }}
+					</NcButton>
+				</div>
+				<div v-if="assetsLoading" class="cm-entity-detail__loading">
+					<NcLoadingIcon :size="24" />
+				</div>
+				<table v-else-if="assets.length" class="cm-entity-detail__related-table">
+					<thead>
+						<tr>
+							<th>{{ t('charity', 'Asset Type') }}</th>
+							<th>{{ t('charity', 'Date Purchased') }}</th>
+							<th>{{ t('charity', 'Serial') }}</th>
+							<th>{{ t('charity', 'IMEI') }}</th>
+							<th>{{ t('charity', 'Warranty') }}</th>
+							<th>{{ t('charity', 'Model') }}</th>
+							<th>{{ t('charity', 'Processor') }}</th>
+							<th>{{ t('charity', 'Paid Amount') }}</th>
+							<th v-if="entityType === 'cc_Case'">
+								{{ t('charity', 'Payment') }}
+							</th>
+							<th v-if="entityType === 'cc_Payment'">
+								{{ t('charity', 'Assigned Case') }}
+							</th>
+							<th />
+						</tr>
+					</thead>
+					<tbody>
+						<tr v-for="asset in assets" :key="asset.id">
+							<td>{{ asset.assetType }}</td>
+							<td>{{ formatDate(asset.datePurchased) }}</td>
+							<td>{{ asset.serial }}</td>
+							<td>{{ asset.imei }}</td>
+							<td>{{ formatDate(asset.warranty) }}</td>
+							<td>{{ asset.model }}</td>
+							<td>{{ asset.processor }}</td>
+							<td>{{ asset.paidAmount }}</td>
+							<td v-if="entityType === 'cc_Case'">
+								<a href="#" @click.prevent="openPaymentFromAsset(asset.refPaymentId)">
+									{{ formatCase(asset.refPaymentId) }}
+								</a>
+							</td>
+							<td v-if="entityType === 'cc_Payment'">
+								{{ formatCase(asset.caseId) }}
+							</td>
+							<td>
+								<NcButton type="tertiary" @click="openEditAsset(asset)">
+									{{ t('charity', 'Edit') }}
+								</NcButton>
+								<NcButton v-if="userStore.isAdminOrCharityAdmin" type="tertiary" @click="deleteAsset(asset)">
+									{{ t('charity', 'Delete') }}
+								</NcButton>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+				<div v-else class="cm-entity-detail__coming-soon">
+					{{ t('charity', 'No assets found') }}
+				</div>
+			</div>
+
 			<!-- TEAM -->
 			<div v-else-if="activeTab === 'team'" class="cm-entity-detail__team">
 				<h3>{{ t('charity', 'Team') }}</h3>
@@ -192,8 +257,9 @@
 
 <script>
 import { NcLoadingIcon, NcButton, NcTextField } from '@nextcloud/vue'
-import { useCasesStore, usePaymentsStore, useUpdatesStore, useTransfersStore, useCaseTypesStore, useUpdateTypesStore, useCitiesStore, useAttachmentsStore } from '../stores/entities.js'
+import { useCasesStore, usePaymentsStore, useUpdatesStore, useTransfersStore, useCaseTypesStore, useUpdateTypesStore, useCitiesStore, useAttachmentsStore, useAssetsStore } from '../stores/entities.js'
 import { useUiStore } from '../stores/ui.js'
+import { useUserStore } from '../stores/user.js'
 import { post } from '../services/api.js'
 import { translate as t } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
@@ -225,11 +291,15 @@ export default {
 			cc_UpdateType: useUpdateTypesStore(),
 		}
 		const attachmentsStore = useAttachmentsStore()
+		const assetsStore = useAssetsStore()
 		const ui = useUiStore()
+		const userStore = useUserStore()
 		return {
 			stores,
 			attachmentsStore,
+			assetsStore,
 			ui,
+			userStore,
 			t,
 		}
 	},
@@ -240,6 +310,8 @@ export default {
 			relatedLoading: false,
 			relatedPayments: [],
 			relatedUpdates: [],
+			assetsLoading: false,
+			assets: [],
 			uploadingFile: false,
 			uploadTag: '',
 			selectedAttachmentId: null,
@@ -276,6 +348,9 @@ export default {
 				{ name: 'summary', label: t('charity', 'Summary') },
 				{ name: 'attachments', label: t('charity', 'Attachments') },
 			]
+			if (this.entityType === 'cc_Case' || (this.entityType === 'cc_Payment' && this.item?.paymentType === 'Asset Purchase')) {
+				all.push({ name: 'assets', label: t('charity', 'Assets') })
+			}
 			if (this.entityType === 'cc_Case') {
 				all.push(
 					{ name: 'team', label: t('charity', 'Team') },
@@ -302,10 +377,10 @@ export default {
 					{ key: 'email', label: t('charity', 'Email') },
 					{ key: 'address', label: t('charity', 'Address') },
 					{ key: 'cityId', label: t('charity', 'City'), formatter: this.formatCity },
-				{ key: 'description', label: t('charity', 'Description') },
-				{ key: 'recommendation', label: t('charity', 'Recommendation') },
-				{ key: 'monthly', label: t('charity', 'Monthly'), formatter: v => v ? t('charity', 'Yes') : t('charity', 'No') },
-			]
+					{ key: 'description', label: t('charity', 'Description') },
+					{ key: 'recommendation', label: t('charity', 'Recommendation') },
+					{ key: 'monthly', label: t('charity', 'Monthly'), formatter: v => v ? t('charity', 'Yes') : t('charity', 'No') },
+				]
 			case 'cc_Payment':
 				return [
 					{ key: 'caseId', label: t('charity', 'Case'), formatter: this.formatCase },
@@ -351,6 +426,11 @@ export default {
 		},
 	},
 	watch: {
+		'ui.slidePanelOpen'(open) {
+			if (!open && this.activeTab === 'assets') {
+				this.loadAssets()
+			}
+		},
 		entityId: {
 			immediate: true,
 			handler(newVal, oldVal) {
@@ -358,6 +438,7 @@ export default {
 					this.activeTab = 'summary'
 					this.relatedPayments = []
 					this.relatedUpdates = []
+					this.assets = []
 				}
 				this.loadItem()
 				if (this.entityType === 'cc_Case' && newVal) {
@@ -373,6 +454,7 @@ export default {
 				this.loadUpdates()
 			}
 			if (tab === 'attachments') this.loadAttachments()
+			if (tab === 'assets') this.loadAssets()
 		},
 	},
 	methods: {
@@ -422,6 +504,42 @@ export default {
 			} finally {
 				this.relatedLoading = false
 			}
+		},
+		async loadAssets() {
+			if (!this.entityId) return
+			this.assetsLoading = true
+			try {
+				if (this.entityType === 'cc_Payment') {
+					this.assets = await post('/assets/byPayment', { paymentId: this.entityId })
+				} else if (this.entityType === 'cc_Case') {
+					this.assets = await post('/assets/byCase', { caseId: this.entityId })
+				}
+			} catch (e) {
+				console.error('Failed to load assets', e)
+				this.assets = []
+			} finally {
+				this.assetsLoading = false
+			}
+		},
+		openAddAsset() {
+			this.ui.openSlidePanel({ mode: 'add', entityType: 'cc_Asset', entity: { paymentId: this.entityId } })
+		},
+		openEditAsset(asset) {
+			this.ui.openSlidePanel({ mode: 'edit', entityType: 'cc_Asset', entity: asset })
+		},
+		async deleteAsset(asset) {
+			if (!confirm(t('charity', 'Are you sure you want to delete this asset?'))) return
+			try {
+				await this.assetsStore.remove(asset.id)
+				this.loadAssets()
+			} catch (err) {
+				console.error(err)
+				alert(err.message)
+			}
+		},
+		openPaymentFromAsset(paymentId) {
+			this.ui.closeSlidePanel()
+			this.$router.push({ name: 'payments', query: { highlight: paymentId } })
 		},
 		async loadAttachments() {
 			if (!this.entityId) return

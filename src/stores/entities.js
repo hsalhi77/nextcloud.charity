@@ -1,12 +1,23 @@
 import { defineStore } from 'pinia'
 import { post, postForm, del } from '../services/api.js'
 
+/**
+ *
+ * @param item
+ * @param field
+ */
 function normaliseDate(item, field) {
 	if (item && item[field] && typeof item[field] === 'object' && item[field].date) {
 		item[field] = item[field].date.slice(0, 10)
 	}
 }
 
+/**
+ *
+ * @param name
+ * @param endpoint
+ * @param dateFields
+ */
 function createEntityStore(name, endpoint, dateFields = []) {
 	return defineStore(name, {
 		state: () => ({
@@ -96,6 +107,7 @@ export const useCitiesStore = createEntityStore('cities', '/city')
 export const useCaseTypesStore = createEntityStore('caseTypes', '/casetype')
 export const useUpdateTypesStore = createEntityStore('updateTypes', '/updatetype')
 export const useTransfersStore = createEntityStore('transfers', '/transfers', ['transferDate'])
+export const useAssetsStore = createEntityStore('assets', '/assets', ['datePurchased', 'warranty'])
 
 export const useAttachmentsStore = defineStore('attachments', {
 	state: () => ({

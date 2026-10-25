@@ -21,8 +21,7 @@
 			</div>
 		</header>
 
-		<EntityFilter
-			v-if="filtersVisible"
+		<EntityFilter v-if="filtersVisible"
 			:fields="filterFields"
 			@filter="applyFilters"
 			@clear="clearFilters" />
@@ -31,8 +30,7 @@
 			<NcLoadingIcon :size="32" />
 		</div>
 
-		<EntityTable v-else
-			:columns="columns"
+		<EntityTable :columns="columns"
 			:items="paymentsStore.items"
 			:actions="actions"
 			:actions-filter="actionsFilter"
@@ -57,6 +55,10 @@
 			<div class="cm-payments-footer__row">
 				<span class="cm-payments-footer__label">{{ t('charity', 'Expense Payment') }}</span>
 				<span class="cm-payments-footer__value">{{ formatAmount(totals.expensePayment) }}</span>
+			</div>
+			<div class="cm-payments-footer__row">
+				<span class="cm-payments-footer__label">{{ t('charity', 'Asset Purchase') }}</span>
+				<span class="cm-payments-footer__value">{{ formatAmount(totals.assetPurchase) }}</span>
 			</div>
 			<div class="cm-payments-footer__row">
 				<span class="cm-payments-footer__label">{{ t('charity', 'Transfer Payment') }}</span>
@@ -133,6 +135,9 @@ export default {
 			const expensePayment = items
 				.filter(p => p.paymentType === 'Expense Payment')
 				.reduce((sum, p) => sum + (parseFloat(p.paymentAmount) || 0), 0)
+			const assetPurchase = items
+				.filter(p => p.paymentType === 'Asset Purchase')
+				.reduce((sum, p) => sum + (parseFloat(p.paymentAmount) || 0), 0)
 			const transferPayment = items
 				.filter(p => p.paymentType === 'Transfer Payment')
 				.reduce((sum, p) => sum + (parseFloat(p.paymentAmount) || 0), 0)
@@ -143,9 +148,10 @@ export default {
 				receipt,
 				payment,
 				expensePayment,
+				assetPurchase,
 				transferPayment,
 				transferReceipt,
-				balance: receipt - payment - expensePayment - transferPayment + transferReceipt,
+				balance: receipt - payment - expensePayment - assetPurchase - transferPayment + transferReceipt,
 			}
 		},
 		caseOptions() {
@@ -213,7 +219,7 @@ export default {
 			return (parseFloat(amount) || 0).toFixed(2)
 		},
 		exportPayments() {
-			const negativeTypes = ['Payment', 'Expense Payment', 'Transfer Payment']
+			const negativeTypes = ['Payment', 'Expense Payment', 'Asset Purchase', 'Transfer Payment']
 			const exportItems = this.paymentsStore.items.map(item => ({
 				...item,
 				paymentAmount: negativeTypes.includes(item.paymentType)
@@ -247,8 +253,9 @@ export default {
 		openDetailPanel(item) {
 			this.ui.openSlidePanel({ mode: 'detail', entityType: 'cc_Payment', entityId: item.id })
 		},
-		openEditPanel(item) {
-			this.ui.openSlidePanel({ mode: 'edit', entityType: 'cc_Payment', entity: item })
+		async openEditPanel(item) {
+			const full = await this.paymentsStore.fetchOne(item.id)
+			this.ui.openSlidePanel({ mode: 'edit', entityType: 'cc_Payment', entity: full || item })
 		},
 		onAction({ name, item }) {
 			if (name === 'edit') this.openEditPanel(item)

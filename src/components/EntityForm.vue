@@ -9,8 +9,7 @@
 				<span v-if="field.required" class="cm-entity-form__required">*</span>
 			</label>
 
-			<NcTextField
-				v-if="field.type === 'text' || field.type === 'number'"
+			<NcTextField v-if="field.type === 'text' || field.type === 'number'"
 				:id="`field-${field.key}`"
 				v-model="form[field.key]"
 				:type="field.type"
@@ -18,8 +17,7 @@
 				:label="field.label"
 				:show-trailing-button="false" />
 
-			<NcDateTimePicker
-				v-else-if="field.type === 'date'"
+			<NcDateTimePicker v-else-if="field.type === 'date'"
 				:id="`field-${field.key}`"
 				v-model="form[field.key]"
 				:type="'date'"
@@ -29,25 +27,23 @@
 				:required="field.required"
 				:label="field.label" />
 
-			<NcTextArea
-				v-else-if="field.type === 'textarea'"
+			<NcTextArea v-else-if="field.type === 'textarea'"
 				:id="`field-${field.key}`"
 				v-model="form[field.key]"
 				:required="field.required"
 				:label="field.label" />
 
-			<NcSelect
-				v-else-if="field.type === 'select'"
+			<NcSelect v-else-if="field.type === 'select'"
 				:id="`field-${field.key}`"
 				v-model="form[field.key]"
 				:options="field.options"
 				:label="field.optionLabel || 'label'"
 				:reduce="field.optionValue ? v => v[field.optionValue] : v => v"
 				:required="field.required"
+				:disabled="field.disabled"
 				:placeholder="field.label" />
 
-			<NcCheckboxRadioSwitch
-				v-else-if="field.type === 'checkbox'"
+			<NcCheckboxRadioSwitch v-else-if="field.type === 'checkbox'"
 				:id="`field-${field.key}`"
 				:checked.sync="form[field.key]">
 				{{ field.label }}
@@ -92,11 +88,6 @@ export default {
 		}
 		return { ui, stores, t }
 	},
-	async mounted() {
-		this.loadingReferences = true
-		await this.loadReferenceStores()
-		this.loadingReferences = false
-	},
 	data() {
 		return {
 			form: {},
@@ -115,7 +106,7 @@ export default {
 			return this.mode === 'add' ? t('charity', 'Create') : t('charity', 'Save Changes')
 		},
 		paymentTypeOptions() {
-			const base = [{ label: 'Payment' }, { label: 'Receipt' }]
+			const base = [{ label: 'Payment' }, { label: 'Receipt' }, { label: 'Asset Purchase' }]
 			if (!this.form.caseId) {
 				base.push({ label: 'Expense Payment' })
 			}
@@ -136,19 +127,19 @@ export default {
 					{ key: 'town', label: t('charity', 'Town'), type: 'text' },
 					{ key: 'location', label: t('charity', 'Location'), type: 'text' },
 					{ key: 'dependants', label: t('charity', 'Dependants'), type: 'number' },
-				{ key: 'description', label: t('charity', 'Description'), type: 'textarea' },
-				{ key: 'recommendation', label: t('charity', 'Recommendation'), type: 'textarea' },
-				{ key: 'monthly', label: t('charity', 'Monthly contribution'), type: 'checkbox' },
-			]
+					{ key: 'description', label: t('charity', 'Description'), type: 'textarea' },
+					{ key: 'recommendation', label: t('charity', 'Recommendation'), type: 'textarea' },
+					{ key: 'monthly', label: t('charity', 'Monthly contribution'), type: 'checkbox' },
+				]
 			case 'cc_Payment':
 				return [
 					{ key: 'caseId', label: t('charity', 'Case'), type: 'select', options: [{ _displayLabel: t('charity', 'None') }, ...(this.stores.cc_Case?.items || []).map(c => ({ ...c, _displayLabel: String(c.id).padStart(10, '0') }))], optionLabel: '_displayLabel', optionValue: 'id' },
 					{ key: 'paymentDate', label: t('charity', 'Payment Date'), type: 'date', required: true },
 					{ key: 'paymentType', label: t('charity', 'Payment Type'), type: 'select', options: this.paymentTypeOptions, optionLabel: 'label', optionValue: 'label' },
-				{ key: 'paymentAmount', label: t('charity', 'Amount'), type: 'number', required: true },
-				{ key: 'paymentReference', label: t('charity', 'Payment Reference'), type: 'text' },
-				{ key: 'paidBy', label: t('charity', 'Cashbook'), type: 'select', options: this.users, optionLabel: 'displayName', optionValue: 'uid' },
-				{ key: 'description', label: t('charity', 'Description'), type: 'textarea' },
+					{ key: 'paymentAmount', label: t('charity', 'Amount'), type: 'number', required: true },
+					{ key: 'paymentReference', label: t('charity', 'Payment Reference'), type: 'text' },
+					{ key: 'paidBy', label: t('charity', 'Cashbook'), type: 'select', options: this.users, optionLabel: 'displayName', optionValue: 'uid' },
+					{ key: 'description', label: t('charity', 'Description'), type: 'textarea' },
 				]
 			case 'cc_Update':
 				return [
@@ -205,6 +196,11 @@ export default {
 				this.form.paymentType = null
 			}
 		},
+	},
+	async mounted() {
+		this.loadingReferences = true
+		await this.loadReferenceStores()
+		this.loadingReferences = false
 	},
 	methods: {
 		async loadReferenceStores() {
