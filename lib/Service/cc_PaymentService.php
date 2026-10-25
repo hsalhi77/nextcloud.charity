@@ -92,11 +92,45 @@ class cc_PaymentService {
 		$this->assetService->loadAssetsForPayment($payment);
 	}
 
+	private function createPayment(array $param): cc_Payment {
+		$item = new cc_Payment();
+		$this->buildPaymentFromParams($item, $param);
+		return $this->mapper->insert($item);
+	}
+
 	public function create($param) {
 		return $this->inTransaction(function () use ($param) {
-			$item = new cc_Payment();
-			$this->buildPaymentFromParams($item, $param);
-			return $this->mapper->insert($item);
+			return $this->createPayment($param);
+		});
+	}
+
+	public function createWithAssets(array $paymentData, array $assets): cc_Payment {
+		return $this->inTransaction(function () use ($paymentData, $assets) {
+			if (empty($paymentData['paymentType']) || $paymentData['paymentType'] !== self::ASSET_TYPE) {
+				throw new \InvalidArgumentException('createWithAssets is only allowed for Asset Purchase payments.');
+			}
+			if (empty($assets)) {
+				throw new \InvalidArgumentException('At least one asset is required.');
+			}
+
+			$expected = (float)($paymentData['paymentAmount'] ?? 0);
+			$total = 0.0;
+			foreach ($assets as $asset) {
+				$total += (float)($asset['paidAmount'] ?? 0);
+			}
+			if (round($expected * 100) !== round($total * 100)) {
+				throw new \InvalidArgumentException(
+					sprintf('Asset total %.2f does not match payment amount %.2f.', $total, $expected)
+				);
+			}
+
+			$payment = $this->createPayment($paymentData);
+			foreach ($assets as $assetParam) {
+				$assetParam['refPaymentId'] = $payment->getId();
+				$this->assetService->create($assetParam);
+			}
+			$this->loadAssets($payment);
+			return $payment;
 		});
 	}
 

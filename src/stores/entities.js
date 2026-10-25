@@ -2,9 +2,9 @@ import { defineStore } from 'pinia'
 import { post, postForm, del } from '../services/api.js'
 
 /**
- *
- * @param item
- * @param field
+ * Normalise a date field on an item.
+ * @param {object} item Item to normalise.
+ * @param {string} field Date field name.
  */
 function normaliseDate(item, field) {
 	if (item && item[field] && typeof item[field] === 'object' && item[field].date) {
@@ -13,12 +13,13 @@ function normaliseDate(item, field) {
 }
 
 /**
- *
- * @param name
- * @param endpoint
- * @param dateFields
+ * Create a Pinia store for an entity.
+ * @param {string} name Store name.
+ * @param {string} endpoint API endpoint base path.
+ * @param {string[]} dateFields Date fields to normalise.
+ * @param {object} [customActions] Additional actions to merge into the store.
  */
-function createEntityStore(name, endpoint, dateFields = []) {
+function createEntityStore(name, endpoint, dateFields = [], customActions = {}) {
 	return defineStore(name, {
 		state: () => ({
 			items: [],
@@ -96,12 +97,20 @@ function createEntityStore(name, endpoint, dateFields = []) {
 			setItems(items) {
 				this.items = this._normalise(items)
 			},
+			...customActions,
 		},
 	})
 }
 
 export const useCasesStore = createEntityStore('cases', '/cases', ['dob', 'dateAdded'])
-export const usePaymentsStore = createEntityStore('payments', '/payments', ['paymentDate'])
+export const usePaymentsStore = createEntityStore('payments', '/payments', ['paymentDate'], {
+	async createWithAssets({ payment, assets }) {
+		const data = await post('/payments/createWithAssets', { payment, assets })
+		const normalised = this._normalise(data)[0]
+		if (normalised) this.items.push(normalised)
+		return normalised
+	},
+})
 export const useUpdatesStore = createEntityStore('updates', '/updates', ['updateDate'])
 export const useCitiesStore = createEntityStore('cities', '/city')
 export const useCaseTypesStore = createEntityStore('caseTypes', '/casetype')

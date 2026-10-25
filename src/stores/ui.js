@@ -7,15 +7,17 @@ export const useUiStore = defineStore('ui', {
 		slidePanelEntity: null,
 		slidePanelEntityType: '',
 		slidePanelEntityId: null,
+		slidePanelInitialTab: null,
 		filters: {},
 	}),
 
 	actions: {
-		openSlidePanel({ mode, entityType, entityId = null, entity = null }) {
+		openSlidePanel({ mode, entityType, entityId = null, entity = null, tab = null }) {
 			this.slidePanelMode = mode
 			this.slidePanelEntityType = entityType
 			this.slidePanelEntityId = entityId
 			this.slidePanelEntity = entity
+			this.slidePanelInitialTab = tab
 			this.slidePanelOpen = true
 		},
 
@@ -23,6 +25,7 @@ export const useUiStore = defineStore('ui', {
 			this.slidePanelOpen = false
 			this.slidePanelEntity = null
 			this.slidePanelEntityId = null
+			this.slidePanelInitialTab = null
 		},
 
 		setFilter(entity, filter) {

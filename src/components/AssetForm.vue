@@ -86,7 +86,7 @@ export default {
 				{ key: 'warranty', label: t('charity', 'Warranty'), type: 'date' },
 				{ key: 'model', label: t('charity', 'Model'), type: 'text' },
 				{ key: 'processor', label: t('charity', 'Processor'), type: 'text' },
-				{ key: 'paidAmount', label: t('charity', 'Paid Amount'), type: 'number', disabled: true },
+				{ key: 'paidAmount', label: t('charity', 'Paid Amount'), type: 'number', required: true },
 				{ key: 'caseId', label: t('charity', 'Assigned Case'), type: 'select', options: this.caseOptions, optionLabel: '_displayLabel', optionValue: 'id' },
 			]
 		},

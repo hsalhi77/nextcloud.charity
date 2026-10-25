@@ -61,6 +61,17 @@ class PaymentController extends Controller {
      * @NoAdminRequired
      * @NoCSRFRequired
      */
+    public function createWithAssets() {
+        return $this->helper->handleErrorResponse(function () {
+            $params = $this->request->getParams();
+            return $this->service->createWithAssets($params['payment'] ?? [], $params['assets'] ?? []);
+        });
+    }
+
+    /**
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     */
     public function update($id) {
         return $this->helper->handleErrorResponse(function () use ($id) {
             return $this->service->update($this->request->getParams(), $id);

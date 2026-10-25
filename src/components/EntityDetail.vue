@@ -279,6 +279,7 @@ export default {
 	props: {
 		entityType: { type: String, required: true },
 		entityId: { type: Number, default: null },
+		initialTab: { type: String, default: null },
 	},
 	setup() {
 		const stores = {
@@ -305,7 +306,7 @@ export default {
 	},
 	data() {
 		return {
-			activeTab: 'summary',
+			activeTab: this.initialTab || 'summary',
 			loading: false,
 			relatedLoading: false,
 			relatedPayments: [],
@@ -324,6 +325,14 @@ export default {
 		item() { return this.store?.byId(this.entityId) },
 		attachments() {
 			return this.attachmentsStore.forObject(this.entityType, this.entityId)
+		},
+		assetTotal() {
+			return this.assets.reduce((sum, asset) => sum + (parseFloat(asset.paidAmount) || 0), 0)
+		},
+		assetTotalMismatch() {
+			if (this.entityType !== 'cc_Payment' || !this.item) return false
+			const expected = parseFloat(this.item.paymentAmount || 0)
+			return Math.round((this.assetTotal - expected) * 100) !== 0
 		},
 		selectedAttachment() {
 			if (!this.selectedAttachmentId) return null
@@ -435,7 +444,7 @@ export default {
 			immediate: true,
 			handler(newVal, oldVal) {
 				if (newVal !== oldVal) {
-					this.activeTab = 'summary'
+					this.activeTab = this.initialTab || 'summary'
 					this.relatedPayments = []
 					this.relatedUpdates = []
 					this.assets = []
@@ -513,6 +522,12 @@ export default {
 					this.assets = await post('/assets/byPayment', { paymentId: this.entityId })
 				} else if (this.entityType === 'cc_Case') {
 					this.assets = await post('/assets/byCase', { caseId: this.entityId })
+				}
+				if (this.assetTotalMismatch) {
+					alert(t('charity', 'Asset total ({total}) does not match payment amount ({amount}).', {
+						total: this.assetTotal.toFixed(2),
+						amount: parseFloat(this.item.paymentAmount || 0).toFixed(2),
+					}))
 				}
 			} catch (e) {
 				console.error('Failed to load assets', e)

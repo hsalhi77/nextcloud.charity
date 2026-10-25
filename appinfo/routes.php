@@ -20,6 +20,7 @@ return [
 
         ['name' => 'payment#getall', 'url' => '/payments/getall', 'verb' => 'POST'],
         ['name' => 'payment#create', 'url' => '/payments', 'verb' => 'POST'],
+        ['name' => 'payment#createWithAssets', 'url' => '/payments/createWithAssets', 'verb' => 'POST'],
         ['name' => 'payment#show', 'url' => '/payments/{id}/show', 'verb' => 'POST'],
         ['name' => 'payment#update', 'url' => '/payments/{id}/update', 'verb' => 'POST'],
         ['name' => 'payment#destroy', 'url' => '/payments/{id}/delete', 'verb' => 'POST'],

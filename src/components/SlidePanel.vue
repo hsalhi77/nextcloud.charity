@@ -23,12 +23,15 @@
 						ref="formComponent"
 						:mode="ui.slidePanelMode"
 						:entity-type="ui.slidePanelEntityType"
-						:entity="ui.slidePanelEntity" />
+						:entity="ui.slidePanelEntity"
+						@created="onCreated"
+						@create-with-assets="openAssetWizard" />
 					<EntityDetail v-else
 						:entity-type="ui.slidePanelEntityType"
-						:entity-id="ui.slidePanelEntityId" />
+						:entity-id="ui.slidePanelEntityId"
+						:initial-tab="ui.slidePanelInitialTab" />
 				</div>
-				<div v-if="ui.slidePanelMode === 'add' || ui.slidePanelMode === 'edit'" class="cm-slide-panel__footer">
+				<div v-if="(ui.slidePanelMode === 'add' || ui.slidePanelMode === 'edit') && !showAssetWizard" class="cm-slide-panel__footer">
 					<NcButton type="secondary" @click="ui.closeSlidePanel">
 						{{ t('charity', 'Cancel') }}
 					</NcButton>
@@ -37,6 +40,10 @@
 					</NcButton>
 				</div>
 			</aside>
+			<AssetPurchaseWizard v-if="showAssetWizard"
+				:payment="pendingPayment"
+				@saved="onWizardSaved"
+				@discard="onWizardDiscard" />
 		</div>
 	</transition>
 </template>
@@ -47,6 +54,7 @@ import CloseIcon from 'vue-material-design-icons/Close.vue'
 import EntityForm from './EntityForm.vue'
 import EntityDetail from './EntityDetail.vue'
 import AssetForm from './AssetForm.vue'
+import AssetPurchaseWizard from './AssetPurchaseWizard.vue'
 import { useUiStore } from '../stores/ui.js'
 import { translate as t } from '@nextcloud/l10n'
 
@@ -58,10 +66,17 @@ export default {
 		EntityForm,
 		EntityDetail,
 		AssetForm,
+		AssetPurchaseWizard,
 	},
 	setup() {
 		const ui = useUiStore()
 		return { ui, t }
+	},
+	data() {
+		return {
+			showAssetWizard: false,
+			pendingPayment: null,
+		}
 	},
 	computed: {
 		title() {
@@ -84,6 +99,23 @@ export default {
 			if (this.$refs.formComponent) {
 				this.$refs.formComponent.submit()
 			}
+		},
+		onCreated() {
+			this.ui.closeSlidePanel()
+		},
+		openAssetWizard(payment) {
+			this.pendingPayment = payment
+			this.showAssetWizard = true
+		},
+		onWizardSaved() {
+			this.showAssetWizard = false
+			this.pendingPayment = null
+			this.ui.closeSlidePanel()
+		},
+		onWizardDiscard() {
+			this.showAssetWizard = false
+			this.pendingPayment = null
+			this.ui.closeSlidePanel()
 		},
 	},
 }

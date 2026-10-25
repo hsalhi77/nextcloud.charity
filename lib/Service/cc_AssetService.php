@@ -64,10 +64,12 @@ class cc_AssetService {
 		if (empty($param['assetType'])) {
 			throw new \InvalidArgumentException('Asset type is required.');
 		}
+		if (!isset($param['paidAmount']) || $param['paidAmount'] === '' || $param['paidAmount'] === null) {
+			throw new \InvalidArgumentException('Paid amount is required.');
+		}
 
 		$asset = new cc_Asset();
 		$asset->setRefPaymentId($paymentId);
-		$asset->setPaidAmount((float)$payment->getPaymentAmount());
 		$paymentDate = $payment->getPaymentDate();
 		if ($paymentDate instanceof \DateTime) {
 			$asset->setDatePurchased($paymentDate);
@@ -86,9 +88,6 @@ class cc_AssetService {
 
 		if (isset($param['refPaymentId'])) {
 			throw new \InvalidArgumentException('Cannot change the parent payment of an asset.');
-		}
-		if (isset($param['paidAmount'])) {
-			throw new \InvalidArgumentException('Cannot change the paid amount of an asset.');
 		}
 
 		$this->applyAssetFields($asset, $param);
@@ -161,6 +160,9 @@ class cc_AssetService {
 		}
 		if (array_key_exists('processor', $param)) {
 			$asset->setProcessor($param['processor'] ?? '');
+		}
+		if (isset($param['paidAmount'])) {
+			$asset->setPaidAmount((float)$param['paidAmount']);
 		}
 	}
 }

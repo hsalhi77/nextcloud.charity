@@ -176,8 +176,9 @@ export default {
 			this.ui.openSlidePanel({ mode: 'edit', entityType: 'cc_Asset', entity: item })
 		},
 		async assignCase(item, caseId) {
+			const normalizedCaseId = caseId && typeof caseId === 'object' ? (caseId.id ?? null) : caseId
 			try {
-				await this.assetsStore.update(item.id, { caseId })
+				await this.assetsStore.update(item.id, { caseId: normalizedCaseId })
 			} catch (err) {
 				console.error(err)
 				alert(err.message)

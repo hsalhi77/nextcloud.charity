@@ -75,6 +75,7 @@ export default {
 		entityType: { type: String, required: true },
 		entity: { type: Object, default: null },
 	},
+	emits: ['created', 'create-with-assets'],
 	setup() {
 		const ui = useUiStore()
 		const stores = {
@@ -244,11 +245,16 @@ export default {
 			}
 			try {
 				if (this.mode === 'add') {
-					await this.store.create(payload)
+					if (this.entityType === 'cc_Payment' && payload.paymentType === 'Asset Purchase') {
+						this.$emit('create-with-assets', payload)
+						return
+					}
+					const created = await this.store.create(payload)
+					this.$emit('created', created)
 				} else {
 					await this.store.update(payload.id, payload)
+					this.ui.closeSlidePanel()
 				}
-				this.ui.closeSlidePanel()
 			} catch (err) {
 				console.error(err)
 				alert(err.message)
